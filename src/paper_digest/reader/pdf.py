@@ -24,7 +24,7 @@ async def download_pdf(paper_url: str) -> bytes:
 
     if not pdf_bytes.startswith(b"%PDF"):
         raise PDFParserError(
-            "The provider URL did not return a valide PDF."
+            "The provided URL did not return a valid PDF."
         )
 
     return pdf_bytes
