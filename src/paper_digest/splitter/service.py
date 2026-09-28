@@ -1,7 +1,7 @@
-from paper_digest.agents.paper_analyser import analyze_paper_content
-from paper_digest.agents.subject_splitter import split_subjects
-from paper_digest.schemas.paper import PaperAnalysisResponse
-from paper_digest.services.pdf_parser import parse_pdf_from_url
+from paper_digest.analyser.agent import analyze_paper_content
+from paper_digest.reader.pdf import parse_pdf_from_url
+from paper_digest.splitter.agent import split_subjects
+from paper_digest.splitter.schemas import PaperAnalysisResponse
 
 
 async def analyze_paper(

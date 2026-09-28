@@ -1,10 +1,8 @@
 import json
 
-from paper_digest.agents.runner import run_agent
-from paper_digest.schemas.paper import (
-    PaperAnalyzerResponse,
-    SubjectSplitterResponse,
-)
+from paper_digest.clients.claude import run_agent
+from paper_digest.analyser.schemas import PaperAnalyzerResponse
+from paper_digest.splitter.schemas import SubjectSplitterResponse
 
 
 SUBJECT_SPLITTER_PROMPT = """
