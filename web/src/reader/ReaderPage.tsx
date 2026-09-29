@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 import { warmPaper } from '../explainer/api'
+import { startFeedBuild } from '../feed/api'
 import { CheckCard } from '../explainer/CheckCard'
 import { ExplainPopover } from '../explainer/ExplainPopover'
 import { extractPaperText } from '../explainer/extractText'
@@ -20,6 +21,7 @@ export function ReaderPage() {
   // Bumped on every open so the viewer remounts with fresh state.
   const [openCount, setOpenCount] = useState(0)
   const [paperText, setPaperText] = useState<string | null>(null)
+  const [paperId, setPaperId] = useState<string | null>(null)
   const [lookups, setLookups] = useState<Lookup[]>([])
   const [guessFirst, setGuessFirst] = useState(false)
   const [showCheck, setShowCheck] = useState(false)
@@ -29,16 +31,25 @@ export function ReaderPage() {
     setSource(next)
     setOpenCount((count) => count + 1)
     setPaperText(null)
+    setPaperId(null)
     setLookups([])
     setShowCheck(false)
     clear()
   }
 
-  const handleDocumentLoad = useCallback(async (pdf: PDFDocumentProxy) => {
-    const text = await extractPaperText(pdf)
-    setPaperText(text)
-    warmPaper(text)
-  }, [])
+  const sourceLabel = source ? pdfSourceLabel(source) : ''
+
+  const handleDocumentLoad = useCallback(
+    async (pdf: PDFDocumentProxy) => {
+      const text = await extractPaperText(pdf)
+      setPaperText(text)
+      const id = await warmPaper(text, sourceLabel)
+      setPaperId(id)
+      // The feed takes a few minutes to prepare; start it right away.
+      if (id) startFeedBuild(id)
+    },
+    [sourceLabel],
+  )
 
   function handleExplained(params: { guess: string | null; result: Explanation }) {
     if (!selected) return
@@ -61,6 +72,16 @@ export function ReaderPage() {
         >
           Check
         </button>
+        {paperId && (
+          <a
+            className="reader__summary-button"
+            href={`/?feed=${paperId}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Learn in the feed ↗
+          </a>
+        )}
         <label className="reader__toggle">
           <input
             type="checkbox"

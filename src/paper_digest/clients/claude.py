@@ -183,23 +183,43 @@ async def ask_claude_once(
     prompt: str,
     response_model: type[T],
     max_tokens: int = 4096,
+    effort: str | None = "low",
+    fallbacks: bool = True,
 ) -> T:
-    """One uncached structured-output call, for one-off tasks on another model."""
+    """One uncached structured-output call, for one-off tasks.
 
-    schema = _closed_schema(response_model.model_json_schema())
+    `effort` and server-side `fallbacks` are not supported on every model
+    (e.g. Haiku 4.5): pass `effort=None, fallbacks=False` there.
+    """
 
-    response = await _get_client().beta.messages.create(
+    output_config: dict = {
+        "format": {
+            "type": "json_schema",
+            "schema": _closed_schema(response_model.model_json_schema()),
+        },
+    }
+    if effort:
+        output_config["effort"] = effort
+
+    params = dict(
         model=model,
         max_tokens=max_tokens,
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
-        output_config={
-            "effort": "low",
-            "format": {"type": "json_schema", "schema": schema},
-        },
+        output_config=output_config,
         system=system,
         messages=[{"role": "user", "content": prompt}],
     )
+    # Streamed so large outputs (e.g. a whole feed) don't hit HTTP timeouts.
+    client = _get_client()
+    if fallbacks:
+        stream = client.beta.messages.stream(
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+            **params,
+        )
+    else:
+        stream = client.messages.stream(**params)
+    async with stream as events:
+        response = await events.get_final_message()
     _log_usage(response.usage)
 
     if response.stop_reason == "refusal":
@@ -209,9 +229,9 @@ async def ask_claude_once(
         (block.text for block in response.content if block.type == "text"),
         None,
     )
-    if text is None:
+    if text is None or response.stop_reason == "max_tokens":
         raise RuntimeError(
-            f"Claude returned no structured output (stop_reason={response.stop_reason})"
+            f"Claude returned no complete structured output (stop_reason={response.stop_reason})"
         )
 
     return response_model.model_validate_json(text)

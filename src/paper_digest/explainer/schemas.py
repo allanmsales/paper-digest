@@ -39,6 +39,12 @@ class ExplainResponse(BaseModel):
 
 class PaperRequest(BaseModel):
     paper_text: str = Field(min_length=1)
+    source: str | None = Field(default=None, description="URL or file name.")
+
+
+class WarmResponse(BaseModel):
+    status: str
+    paper_id: str
 
 
 class PaperSection(BaseModel):

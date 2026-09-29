@@ -66,13 +66,17 @@ export function analogy(paperText: string, subject: string): Promise<Analogy> {
   return post('analogy', { paper_text: paperText, subject })
 }
 
-/** Asks the API to prompt-cache the paper so the first lookup is fast. */
-export function warmPaper(paperText: string): void {
-  fetch('/api/explainer/warm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paper_text: paperText }),
-  }).catch(() => {
+/** Saves the paper and asks the API to prompt-cache it so the first
+ *  lookup is fast. Resolves to the paper id, or null on failure. */
+export async function warmPaper(paperText: string, source: string): Promise<string | null> {
+  try {
+    const { paper_id } = await post<{ paper_id: string }>('warm', {
+      paper_text: paperText,
+      source,
+    })
+    return paper_id
+  } catch {
     // Best effort: lookups still work without a warm cache.
-  })
+    return null
+  }
 }

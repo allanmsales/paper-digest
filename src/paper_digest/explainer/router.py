@@ -5,6 +5,7 @@ from paper_digest.explainer.agent import (
     check_understanding,
     explain_by_analogy,
     explain_selection,
+    register_paper,
     summarize_paper,
     warm_paper,
 )
@@ -19,6 +20,7 @@ from paper_digest.explainer.schemas import (
     ExplainResponse,
     PaperRequest,
     SummaryResponse,
+    WarmResponse,
 )
 
 
@@ -90,12 +92,17 @@ async def ask(
     return await answer_question(request)
 
 
-@router.post("/warm", status_code=202)
+@router.post(
+    "/warm",
+    status_code=202,
+    response_model=WarmResponse,
+)
 async def warm(
     request: PaperRequest,
     background_tasks: BackgroundTasks,
-) -> dict[str, str]:
+) -> WarmResponse:
 
+    key = register_paper(request.paper_text, request.source)
     background_tasks.add_task(warm_paper, request.paper_text)
 
-    return {"status": "warming"}
+    return WarmResponse(status="warming", paper_id=key)
