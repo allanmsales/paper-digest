@@ -8,13 +8,14 @@ export type FeedPost = {
   options: string[]
   answer_index: number | null
   why_it_matters: string
+  /** Finished by this user earlier. */
+  done: boolean
 }
 
+/** The user's whole feed for a paper: one fixed set of posts. */
 export type FeedSession = {
   status: 'building' | 'ready' | 'error'
   error: string | null
   posts: FeedPost[]
-  seen_concepts: number
-  total_concepts: number
-  remaining_posts: number
+  done: number
 }

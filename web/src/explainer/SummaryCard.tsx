@@ -7,10 +7,13 @@ import type { Summary } from './types'
 
 type Props = {
   paperText: string
+  /** Shows a "Got it" button that counts the summary as read. */
+  confirmed?: boolean
+  onConfirm?: () => void
 }
 
 /** Problem / Idea / Result of the whole paper, prepared during warm-up. */
-export function SummaryCard({ paperText }: Props) {
+export function SummaryCard({ paperText, confirmed = false, onConfirm }: Props) {
   const [summary, setSummary] = useState<Summary | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,6 +52,14 @@ export function SummaryCard({ paperText }: Props) {
             paperText={paperText}
             subject={`The paper's main idea: ${summary.idea}`}
           />
+          {onConfirm &&
+            (confirmed ? (
+              <p className="reading__done">✓ Got it</p>
+            ) : (
+              <button className="podcast__button summary__confirm" onClick={onConfirm}>
+                Got it
+              </button>
+            ))}
         </div>
       )}
     </div>

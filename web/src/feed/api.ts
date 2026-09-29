@@ -12,8 +12,8 @@ export async function fetchSession(paperId: string): Promise<FeedSession> {
   return response.json()
 }
 
-export function recordView(postId: number, correct: boolean | null): void {
-  fetch('/api/feed/view', {
+export function recordView(postId: number, correct: boolean | null): Promise<unknown> {
+  return fetch('/api/feed/view', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ post_id: postId, correct }),

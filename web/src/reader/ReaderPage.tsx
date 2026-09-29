@@ -12,13 +12,21 @@ import { SummaryCard } from '../explainer/SummaryCard'
 import type { Explanation, Lookup } from '../explainer/types'
 import { useTextSelection } from '../explainer/useTextSelection'
 import { PodcastCard } from '../podcast/PodcastCard'
+import { confirmMilestone } from '../progress/api'
+import { notifyProgress, useProgress } from '../progress/events'
+import type { MilestoneItem } from '../progress/types'
+import { MapWidget } from '../progress/MapWidget'
+import { ProgressPanel } from '../progress/ProgressPanel'
+import { VideoWidget } from '../video/VideoWidget'
 import type { User } from '../users/types'
 import { UserMenu } from '../users/UserMenu'
 import '../users/users.css'
 import '../explainer/explainer.css'
 import { LibraryList } from './LibraryList'
+import { useReadingTracker } from './useReadingTracker'
 import { PdfSourceForm } from './PdfSourceForm'
 import { PdfViewer } from './PdfViewer'
+import { ReadingPanel } from './ReadingPanel'
 import { SideSection } from './SideSection'
 import { pdfSourceLabel, type PdfSource } from './types'
 import './reader.css'
@@ -27,7 +35,16 @@ type Props = {
   user: User
 }
 
-type SectionId = 'summary' | 'feed' | 'check' | 'podcast' | 'video' | 'lookups'
+type SectionId =
+  | 'reading'
+  | 'summary'
+  | 'podcast'
+  | 'video'
+  | 'feed'
+  | 'check'
+  | 'progress'
+  | 'map'
+  | 'lookups'
 
 // Per-browser layout preferences; the page works without them.
 function loadPref<T extends string>(key: string, fallback: T): T {
@@ -53,12 +70,14 @@ export function ReaderPage({ user }: Props) {
   const [paperText, setPaperText] = useState<string | null>(null)
   const [paperId, setPaperId] = useState<string | null>(null)
   const [lookups, setLookups] = useState<Lookup[]>([])
-  const [guessFirst, setGuessFirst] = useState(false)
   const [openSection, setOpenSection] = useState<SectionId | ''>(() =>
-    loadPref<SectionId | ''>('pd.side.open', 'summary'),
+    loadPref<SectionId | ''>('pd.side.open', 'reading'),
   )
   const [folded, setFolded] = useState(() => loadPref('pd.side.folded', '') === '1')
   const { selected, onMouseUp, clear } = useTextSelection()
+  const progress = useProgress(paperId)
+  const [pageCount, setPageCount] = useState(0)
+  const handlePageRead = useReadingTracker(paperId)
 
   function handleOpen(next: PdfSource) {
     setSource(next)
@@ -73,6 +92,7 @@ export function ReaderPage({ user }: Props) {
 
   const handleDocumentLoad = useCallback(
     async (pdf: PDFDocumentProxy) => {
+      setPageCount(pdf.numPages)
       const text = await extractPaperText(pdf)
       setPaperText(text)
       const id = await warmPaper(text, sourceLabel)
@@ -95,6 +115,18 @@ export function ReaderPage({ user }: Props) {
     }
   }, [paperId])
 
+  function confirmStep(item: MilestoneItem) {
+    if (!paperId) return
+    confirmMilestone(paperId, item)
+      .then(notifyProgress)
+      .catch(() => {})
+  }
+
+  function showSection(id: SectionId) {
+    setOpenSection(id)
+    savePref('pd.side.open', id)
+  }
+
   function toggleSection(id: SectionId) {
     const next = openSection === id ? '' : id
     setOpenSection(next)
@@ -106,11 +138,17 @@ export function ReaderPage({ user }: Props) {
     savePref('pd.side.folded', folded ? '' : '1')
   }
 
-  function section(id: SectionId, title: string, children: ReactNode, count?: number) {
+  function section(
+    id: SectionId,
+    title: string,
+    children: ReactNode,
+    badge?: { count?: number; progress?: number },
+  ) {
     return (
       <SideSection
         title={title}
-        count={count}
+        count={badge?.count}
+        progress={badge?.progress}
         open={openSection === id}
         onToggle={() => toggleSection(id)}
       >
@@ -132,14 +170,6 @@ export function ReaderPage({ user }: Props) {
       <header className="reader__header">
         <h1>Paper Digest</h1>
         <PdfSourceForm onOpen={handleOpen} />
-        <label className="reader__toggle">
-          <input
-            type="checkbox"
-            checked={guessFirst}
-            onChange={(event) => setGuessFirst(event.target.checked)}
-          />
-          Guess first
-        </label>
         <UserMenu user={user} />
       </header>
 
@@ -153,6 +183,7 @@ export function ReaderPage({ user }: Props) {
               key={openCount}
               source={source}
               onDocumentLoad={handleDocumentLoad}
+              onPageRead={handlePageRead}
             />
           </div>
           <div className={`reader__side${folded ? ' reader__side--folded' : ''}`}>
@@ -166,61 +197,77 @@ export function ReaderPage({ user }: Props) {
             </button>
             {!folded && (
               <>
+                <h2 className="side-group">Learning path</h2>
+                {section(
+                  'reading',
+                  '1. Reading',
+                  paperId ? (
+                    <ReadingPanel paperId={paperId} progress={progress} pageCount={pageCount} />
+                  ) : (
+                    <p className="analogy__status">Reading the paper…</p>
+                  ),
+                  { progress: progress?.reading },
+                )}
                 {section(
                   'summary',
-                  'Paper in 3 lines',
+                  '2. Paper in 3 lines',
                   paperText ? (
-                    <SummaryCard paperText={paperText} />
+                    <SummaryCard
+                      paperText={paperText}
+                      confirmed={progress?.confirmed.includes('summary')}
+                      onConfirm={paperId ? () => confirmStep('summary') : undefined}
+                    />
                   ) : (
                     <p className="analogy__status">Reading the paper…</p>
                   ),
-                )}
-                {section(
-                  'feed',
-                  'Learning feed',
-                  paperId ? (
-                    <FeedPanel key={paperId} paperId={paperId} />
-                  ) : (
-                    <p className="analogy__status">Reading the paper…</p>
-                  ),
-                )}
-                {section(
-                  'check',
-                  'Check your understanding',
-                  paperText ? (
-                    <CheckCard paperText={paperText} paperId={paperId} />
-                  ) : (
-                    <p className="analogy__status">Reading the paper…</p>
-                  ),
+                  { progress: progress?.summary },
                 )}
                 {section(
                   'podcast',
-                  'Podcast',
-                  paperId ? (
-                    <PodcastCard key={paperId} paperId={paperId} />
-                  ) : (
-                    <p className="analogy__status">Reading the paper…</p>
-                  ),
+                  '3. Podcast',
+                  paperId ? <PodcastCard key={paperId} paperId={paperId} /> : <p className="analogy__status">Reading the paper…</p>,
+                  { progress: progress?.podcast },
                 )}
                 {section(
                   'video',
-                  'Explainer video',
+                  '4. Explainer video',
+                  paperId ? <VideoWidget key={paperId} paperId={paperId} /> : <p className="analogy__status">Reading the paper…</p>,
+                  { progress: progress?.video },
+                )}
+                {section(
+                  'feed',
+                  '5. Learning feed',
+                  paperId ? <FeedPanel key={paperId} paperId={paperId} /> : <p className="analogy__status">Reading the paper…</p>,
+                  { progress: progress?.feed },
+                )}
+                {section(
+                  'check',
+                  '6. Check your understanding',
+                  paperText ? <CheckCard paperText={paperText} paperId={paperId} /> : <p className="analogy__status">Reading the paper…</p>,
+                  { progress: progress?.check },
+                )}
+
+                <h2 className="side-group">Results and notes</h2>
+                {section(
+                  'progress',
+                  'Your progress',
                   paperId ? (
-                    <p className="podcast__hint">
-                      The paper's main flow and math, animated scene by scene.{' '}
-                      <a href={`/?video=${paperId}`} target="_blank" rel="noreferrer">
-                        Watch ↗
-                      </a>
-                    </p>
+                    <ProgressPanel paperId={paperId} progress={progress} onGo={showSection} />
                   ) : (
                     <p className="analogy__status">Reading the paper…</p>
                   ),
+                  { progress: progress?.completion },
+                )}
+                {section(
+                  'map',
+                  'Knowledge map',
+                  paperId ? <MapWidget key={paperId} paperId={paperId} /> : <p className="analogy__status">Reading the paper…</p>,
                 )}
                 {section(
                   'lookups',
                   'Your lookups',
                   <LookupsPanel lookups={lookups} paperText={paperText} />,
-                  lookups.length,
+                  { count: lookups.length },
                 )}
               </>
             )}
@@ -240,7 +287,6 @@ export function ReaderPage({ user }: Props) {
           key={`${selected.text}-${selected.rect.top}-${selected.rect.left}`}
           selected={selected}
           paperText={paperText}
-          guessFirst={guessFirst}
           onExplained={handleExplained}
           onClose={clear}
         />

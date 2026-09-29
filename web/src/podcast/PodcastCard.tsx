@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { audioStatus, audioUrl, generateAudio, podcastScript } from './api'
+import { useHeardTracker } from '../progress/useHeardTracker'
 import type { AudioStatus, Script } from './types'
 import './podcast.css'
 
@@ -16,6 +17,7 @@ export function PodcastCard({ paperId }: Props) {
   const [script, setScript] = useState<Script | null>(null)
   const [showTranscript, setShowTranscript] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const track = useHeardTracker(paperId, 'podcast')
 
   useEffect(() => {
     let active = true
@@ -88,7 +90,16 @@ export function PodcastCard({ paperId }: Props) {
 
       {status === 'ready' && (
         <>
-          <audio className="podcast__player" controls preload="metadata" src={audioUrl(paperId)} />
+          <audio
+            className="podcast__player"
+            controls
+            preload="metadata"
+            src={audioUrl(paperId)}
+            onTimeUpdate={(event) => {
+              const player = event.currentTarget
+              if (!player.paused) track(player.currentTime, player.duration)
+            }}
+          />
           {script && (
             <button
               className="podcast__link"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 
 import { beatAt, buildTimeline, sceneAt, sentenceAt } from './timeline'
 import type { Narration, Storyboard } from './types'
@@ -9,6 +9,28 @@ type Props = {
   /** Narration audio and its timings; without them the video plays silently. */
   audioUrl?: string
   narration?: Narration | null
+  /** Called with (time, total) while playing, to track what was watched. */
+  onPlayed?: (time: number, total: number) => void
+}
+
+// The stage is laid out at this size and scaled to fit, like a video frame.
+const STAGE_W = 960
+const STAGE_H = 540
+
+/** Scale that fits the fixed stage inside `frame`, tracking resizes. */
+function useStageScale(frame: RefObject<HTMLDivElement | null>) {
+  const [scale, setScale] = useState(1)
+  useLayoutEffect(() => {
+    const element = frame.current
+    if (!element) return
+    const update = () =>
+      setScale(Math.min(element.clientWidth / STAGE_W, element.clientHeight / STAGE_H))
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [frame])
+  return scale
 }
 
 function clock(seconds: number): string {
@@ -18,7 +40,7 @@ function clock(seconds: number): string {
 
 /** A fake video: the visuals animate in step with the narration, shown as
  *  captions. With audio, the audio's clock drives everything. */
-export function VideoPlayer({ board, audioUrl, narration }: Props) {
+export function VideoPlayer({ board, audioUrl, narration, onPlayed }: Props) {
   const withAudio = !!audioUrl && !!narration
   const timeline = useMemo(
     () => buildTimeline(board, withAudio ? narration : null),
@@ -28,6 +50,8 @@ export function VideoPlayer({ board, audioUrl, narration }: Props) {
   const [playing, setPlaying] = useState(false)
   const last = useRef<number | null>(null)
   const audio = useRef<HTMLAudioElement>(null)
+  const frame = useRef<HTMLDivElement>(null)
+  const scale = useStageScale(frame)
 
   useEffect(() => {
     if (!playing) return
@@ -56,6 +80,10 @@ export function VideoPlayer({ board, audioUrl, narration }: Props) {
       last.current = null
     }
   }, [playing, timeline.total])
+
+  useEffect(() => {
+    if (playing) onPlayed?.(time, timeline.total)
+  }, [playing, time, timeline.total, onPlayed])
 
   const scene = sceneAt(timeline, time)
   const offset = time - scene.start
@@ -91,26 +119,23 @@ export function VideoPlayer({ board, audioUrl, narration }: Props) {
     setPlaying(!playing || ended)
   }
 
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
-        return
-      }
-      if (event.key === ' ') {
-        event.preventDefault()
-        togglePlay()
-      } else if (event.key === 'ArrowRight') {
-        goToScene(scene.index + 1)
-      } else if (event.key === 'ArrowLeft') {
-        goToScene(offset > 2 ? scene.index : scene.index - 1)
-      }
+  // Shortcuts only while the player has focus, so the page keeps its keys.
+  function onKey(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.target instanceof HTMLInputElement && event.target.type !== 'range') return
+    if (event.key === ' ') {
+      event.preventDefault()
+      togglePlay()
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      goToScene(scene.index + 1)
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      goToScene(offset > 2 ? scene.index : scene.index - 1)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  })
+  }
 
   return (
-    <div className="player">
+    <div className="player" tabIndex={0} onKeyDown={onKey} aria-label="Explainer video">
       {withAudio && (
         <audio
           ref={audio}
@@ -124,7 +149,15 @@ export function VideoPlayer({ board, audioUrl, narration }: Props) {
           }}
         />
       )}
-      <div className="player__stage" onClick={togglePlay}>
+      <div className="player__frame" ref={frame}>
+      <div
+        className="player__stage"
+        onClick={togglePlay}
+        style={{
+          transform: `scale(${scale})`,
+          left: `calc(50% - ${(STAGE_W * scale) / 2}px)`,
+        }}
+      >
         <div className="player__chip">
           {scene.index + 1}. {current.title}
         </div>
@@ -139,6 +172,7 @@ export function VideoPlayer({ board, audioUrl, narration }: Props) {
             <span>{ended ? '↻' : '▶'}</span>
           </div>
         )}
+      </div>
       </div>
 
       <div className="player__controls">
@@ -172,19 +206,6 @@ export function VideoPlayer({ board, audioUrl, narration }: Props) {
         </span>
       </div>
 
-      <ol className="player__chapters">
-        {board.scenes.map((item, index) => (
-          <li key={index}>
-            <button
-              className={index === scene.index ? 'is-current' : undefined}
-              onClick={() => goToScene(index)}
-            >
-              <span>{clock(timeline.scenes[index].start)}</span>
-              {item.title}
-            </button>
-          </li>
-        ))}
-      </ol>
     </div>
   )
 }

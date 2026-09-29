@@ -10,6 +10,9 @@ class FeedBuild(SQLModel, table=True):
     status: str = "building"  # building | ready | error
     error: str | None = None
     concepts: str = "[]"  # JSON list of concept names, foundations first
+    # ConceptGraph JSON: which concepts each one requires. Null for feeds
+    # built before the map existed until it is inferred.
+    graph: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -30,4 +33,13 @@ class PostView(SQLModel, table=True):
     paper_id: str = Field(index=True)
     user_id: int | None = Field(default=None, index=True)
     correct: bool | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class FeedSelection(SQLModel, table=True):
+    """The fixed set of posts that is this user's feed for a paper."""
+
+    user_id: int = Field(primary_key=True)
+    paper_id: str = Field(primary_key=True)
+    post_ids: str  # JSON list, in reading order
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

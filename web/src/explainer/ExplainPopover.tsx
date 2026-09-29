@@ -8,7 +8,6 @@ const POPOVER_WIDTH = 320
 
 type Stage =
   | { name: 'idle' }
-  | { name: 'guessing' }
   | { name: 'loading' }
   | { name: 'done'; result: Explanation }
   | { name: 'error'; message: string }
@@ -16,7 +15,6 @@ type Stage =
 type Props = {
   selected: SelectedText
   paperText: string | null
-  guessFirst: boolean
   onExplained: (params: { guess: string | null; result: Explanation }) => void
   onClose: () => void
 }
@@ -24,12 +22,10 @@ type Props = {
 export function ExplainPopover({
   selected,
   paperText,
-  guessFirst,
   onExplained,
   onClose,
 }: Props) {
   const [stage, setStage] = useState<Stage>({ name: 'idle' })
-  const [guess, setGuess] = useState('')
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -76,7 +72,7 @@ export function ExplainPopover({
           className="explain-popover__trigger"
           disabled={!paperText}
           title={paperText ? undefined : 'Still reading the paper text…'}
-          onClick={() => (guessFirst ? setStage({ name: 'guessing' }) : run(null))}
+          onClick={() => run(null)}
         >
           Explain
         </button>
@@ -92,34 +88,6 @@ export function ExplainPopover({
           </header>
 
           <div className="explain-popover__body">
-            {stage.name === 'guessing' && (
-              <form
-                className="explain-popover__guess"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  run(guess.trim() || null)
-                }}
-              >
-                <label htmlFor="guess">What do you think it means?</label>
-                <textarea
-                  id="guess"
-                  rows={3}
-                  autoFocus
-                  value={guess}
-                  onChange={(event) => setGuess(event.target.value)}
-                  placeholder="One line is enough."
-                />
-                <div className="explain-popover__actions">
-                  <button type="button" className="link" onClick={() => run(null)}>
-                    Skip
-                  </button>
-                  <button type="submit" disabled={!guess.trim()}>
-                    Check my guess
-                  </button>
-                </div>
-              </form>
-            )}
-
             {stage.name === 'loading' && (
               <p className="explain-popover__status">Clarifying…</p>
             )}

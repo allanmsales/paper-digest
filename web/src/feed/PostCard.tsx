@@ -5,13 +5,15 @@ import type { FeedPost } from './types'
 type Props = {
   post: FeedPost
   onDone: (correct: boolean | null) => void
+  /** Finished earlier: shown as done. */
+  finished?: boolean
 }
 
 /** One post. The reader finishes it by reading, flipping or answering. */
-export function PostCard({ post, onDone }: Props) {
+export function PostCard({ post, onDone, finished = false }: Props) {
   const [flipped, setFlipped] = useState(false)
   const [picked, setPicked] = useState<number | null>(null)
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState(finished)
 
   function finish(correct: boolean | null) {
     if (done) return

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
 import { PostCard } from './PostCard'
 import { useFeedSession } from './useFeedSession'
@@ -10,15 +10,14 @@ type Props = {
 
 /** The learning feed inside the reader's side column, one post at a time. */
 export function FeedPanel({ paperId }: Props) {
-  const [index, setIndex] = useState(0)
-  const resetIndex = useCallback(() => setIndex(0), [])
-  const { session, posts, done, error, load, markDone, allDone, progress } = useFeedSession(
-    paperId,
-    resetIndex,
-  )
+  const [index, setIndex] = useState<number | null>(null)
+  const { session, posts, done, error, markDone, allDone, progress } = useFeedSession(paperId)
+  // Resume at the first post not finished yet.
+  const firstOpen = posts.findIndex((post) => !post.done)
+  const current = index ?? (firstOpen === -1 ? posts.length : firstOpen)
 
-  const post = posts[index]
-  const atEnd = index >= posts.length
+  const post = posts[current]
+  const atEnd = current >= posts.length
 
   return (
     <div className="feed-panel">
@@ -39,12 +38,12 @@ export function FeedPanel({ paperId }: Props) {
 
       {session?.status === 'ready' && (
         <>
-          <div className="feed__progress" title={`${progress}% of concepts`}>
+          <div className="feed__progress" title={`${progress}% done`}>
             <div className="feed__bar">
               <div style={{ width: `${progress}%` }} />
             </div>
             <span>
-              {session.seen_concepts} of {session.total_concepts} concepts
+              {done.size} of {posts.length} done
             </span>
           </div>
 
@@ -53,37 +52,31 @@ export function FeedPanel({ paperId }: Props) {
               key={post.id}
               post={post}
               onDone={(correct) => markDone(post.id, correct)}
+              finished={done.has(post.id)}
             />
           )}
 
           {atEnd && (
             <section className={`feed__end${allDone ? ' is-complete' : ''}`}>
-              {posts.length === 0 ? (
-                <p>You’ve gone through every post for this paper. 🎉</p>
-              ) : allDone ? (
-                <p>Done for today. 🎉</p>
+              {allDone ? (
+                <p>All {posts.length} done. 🎉</p>
               ) : (
                 <p>
                   {done.size} of {posts.length} done. Go back to finish the rest.
                 </p>
-              )}
-              {session.remaining_posts > 0 && (
-                <button onClick={load} disabled={!allDone}>
-                  8 more
-                </button>
               )}
             </section>
           )}
 
           {posts.length > 0 && (
             <nav className="feed-panel__nav">
-              <button disabled={index === 0} onClick={() => setIndex(index - 1)}>
+              <button disabled={current === 0} onClick={() => setIndex(current - 1)}>
                 ← Back
               </button>
               <span>
-                {Math.min(index + 1, posts.length)} / {posts.length}
+                {Math.min(current + 1, posts.length)} / {posts.length}
               </span>
-              <button disabled={atEnd} onClick={() => setIndex(index + 1)}>
+              <button disabled={atEnd} onClick={() => setIndex(current + 1)}>
                 Next →
               </button>
             </nav>

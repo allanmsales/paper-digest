@@ -8,12 +8,13 @@ from paper_digest.clients.claude import ask_claude_once
 from paper_digest.core.config import settings
 from paper_digest.core.db import db_session
 from paper_digest.explainer.agent import summarize_paper
-from paper_digest.explainer.store import list_signals
-from paper_digest.feed.models import FeedBuild, Post, PostView
+from paper_digest.feed.models import FeedBuild, FeedSelection, Post, PostView
 from paper_digest.feed.schemas import (
+    ConceptGraph,
+    ConceptLinks,
+    ConceptStats,
     FeedPost,
     FeedSession,
-    GapConcepts,
     PostDraft,
     PostDrafts,
 )
@@ -24,7 +25,6 @@ from paper_digest.splitter.service import analyze_text
 
 logger = logging.getLogger("uvicorn.error")
 
-SESSION_SIZE = 8
 
 # Keeps the post-writing call (and the reader's feed) a manageable size.
 MAX_CONCEPTS = 40
@@ -51,13 +51,6 @@ Write exactly 2 posts per concept, in the order of the CONCEPTS list.
   1 in 4 posts interactive ("flip" or "quiz"), spread evenly.
 - quiz: 3 short options, exactly one right; wrong options should be
   plausible, not silly.
-"""
-
-GAPS_PROMPT = """
-A reader is learning a research paper. Below are things they struggled
-with (lookups, missed ideas, questions) and the list of prerequisite
-CONCEPTS of the paper. Return the concepts that would help most with those
-struggles, most helpful first (max 10). Use exact names from the list.
 """
 
 _builds: dict[str, asyncio.Task[None]] = {}
@@ -100,10 +93,14 @@ async def _build(paper_id: str) -> None:
     if not concepts:
         analysis = await analyze_text(paper.text)
         concepts = order_concepts(analysis.subjects, analysis.new_subject)
+        graph = acyclic_graph(
+            concepts, {subject.name: subject.requires for subject in analysis.subjects}
+        )
         # Saved before writing posts, so a retry skips the slow splitter.
         with db_session() as session:
             build = session.get(FeedBuild, paper_id)
             build.concepts = json.dumps(concepts)
+            build.graph = graph.model_dump_json()
             session.add(build)
             session.commit()
 
@@ -183,24 +180,151 @@ def start_build(paper_id: str, retry: bool = False) -> str:
     return "building"
 
 
-async def _gap_concepts(paper_id: str, user_id: int, concepts: list[str]) -> list[str]:
-    signals = list_signals(paper_id, user_id)[:30]
-    if not signals:
-        return []
-    struggles = "\n".join(f"- ({signal.kind}) {signal.text}" for signal in signals)
-    result = await ask_claude_once(
-        model=settings.claude_model,
-        system=GAPS_PROMPT,
-        prompt=(
-            f"<STRUGGLES>\n{struggles}\n</STRUGGLES>\n\n"
-            "<CONCEPTS>\n" + "\n".join(concepts) + "\n</CONCEPTS>"
-        ),
-        response_model=GapConcepts,
-        effort=None,
-        fallbacks=False,
+def acyclic_graph(concepts: list[str], requires: dict[str, list[str]]) -> ConceptGraph:
+    """Keeps only links between known concepts that point to an earlier one
+    in the foundations-first order, so the graph is always acyclic."""
+    position = {name: index for index, name in enumerate(concepts)}
+    return ConceptGraph(
+        main=concepts[-1],
+        requires={
+            name: sorted(
+                {
+                    need
+                    for need in requires.get(name, [])
+                    if need in position and position[need] < position[name]
+                },
+                key=position.__getitem__,
+            )
+            for name in concepts
+        },
     )
-    known = set(concepts)
-    return [name for name in result.concepts if name in known]
+
+
+LINKS_PROMPT = """
+You map how the concepts needed to read one AI/ML paper build on each
+other. For every concept in the list, give the concepts from the same list
+it directly builds on (its immediate prerequisites, not all ancestors).
+Foundations build on nothing. The list is ordered foundations first, and
+the last concept is the paper's own new idea. Use exact names from the list.
+"""
+
+_graphs: dict[str, asyncio.Task[None]] = {}
+
+
+async def _infer_graph(paper_id: str, concepts: list[str]) -> None:
+    """For feeds built before graphs were saved: links among the existing
+    concepts, so the map matches the feed's posts."""
+    try:
+        result = await ask_claude_once(
+            model=settings.claude_model,
+            system=LINKS_PROMPT,
+            prompt="<CONCEPTS>\n" + "\n".join(concepts) + "\n</CONCEPTS>",
+            response_model=ConceptLinks,
+            max_tokens=8000,
+            effort=None,
+            fallbacks=False,
+        )
+        graph = acyclic_graph(concepts, {link.concept: link.requires for link in result.links})
+        with db_session() as session:
+            build = session.get(FeedBuild, paper_id)
+            build.graph = graph.model_dump_json()
+            session.add(build)
+            session.commit()
+    except Exception:
+        logger.exception("concept graph failed for %s", paper_id)
+    finally:
+        _graphs.pop(paper_id, None)
+
+
+def concept_graph(paper_id: str) -> tuple[str, ConceptGraph | None]:
+    """The paper's concept graph and its status: ready, building or none
+    (no feed yet). Starts inferring it for older feeds."""
+    with db_session() as session:
+        build = session.get(FeedBuild, paper_id)
+        if build is None or not json.loads(build.concepts):
+            return ("building" if build and build.status == "building" else "none"), None
+        if build.graph:
+            return "ready", ConceptGraph.model_validate_json(build.graph)
+        concepts = json.loads(build.concepts)
+    if paper_id not in _graphs:
+        _graphs[paper_id] = asyncio.create_task(_infer_graph(paper_id, concepts))
+    return "building", None
+
+
+def concept_stats(paper_id: str, user_id: int) -> dict[str, ConceptStats]:
+    """Per concept: how many posts it has, and how many this user finished
+    or answered right/wrong."""
+    with db_session() as session:
+        posts = list(session.exec(select(Post).where(Post.paper_id == paper_id)))
+        views = list(
+            session.exec(
+                select(PostView).where(
+                    PostView.paper_id == paper_id, PostView.user_id == user_id
+                )
+            )
+        )
+    latest = {view.post_id: view for view in sorted(views, key=lambda view: view.created_at)}
+    stats: dict[str, ConceptStats] = {}
+    for post in posts:
+        item = stats.setdefault(post.concept, ConceptStats())
+        item.posts += 1
+        view = latest.get(post.id)
+        if view is None:
+            continue
+        item.seen += 1
+        if view.correct is True:
+            item.right += 1
+        elif view.correct is False:
+            item.wrong += 1
+    return stats
+
+
+def _select_posts(posts: list[Post]) -> list[int]:
+    """Picks the user's feed once: one post for every concept of the paper,
+    foundations first, so the whole knowledge map is covered."""
+    by_concept: dict[str, list[Post]] = {}
+    for post in sorted(posts, key=lambda post: post.id):
+        by_concept.setdefault(post.concept, []).append(post)
+    concepts = sorted(by_concept, key=lambda name: by_concept[name][0].concept_order)
+    # Alternate reading a lesson with doing something (a quiz, else a flip).
+    preference = [["lesson", "quiz", "flip"], ["quiz", "flip", "lesson"]]
+    picked = []
+    for index, name in enumerate(concepts):
+        options = by_concept[name]
+        rank = preference[index % 2]
+        picked.append(min(options, key=lambda post: rank.index(post.kind)).id)
+    return picked
+
+
+def _selection(paper_id: str, user_id: int) -> list[int]:
+    with db_session() as session:
+        posts = list(session.exec(select(Post).where(Post.paper_id == paper_id)))
+        row = session.get(FeedSelection, (user_id, paper_id))
+    concept_of = {post.id: post.concept for post in posts}
+    if row is not None:
+        ids = json.loads(row.post_ids)
+        # Pick again if the feed was rebuilt (posts replaced) or the saved
+        # pick doesn't cover every concept (e.g. an older, shorter feed).
+        if all(post_id in concept_of for post_id in ids) and {
+            concept_of[post_id] for post_id in ids
+        } == set(concept_of.values()):
+            return ids
+    ids = _select_posts(posts)
+    with db_session() as session:
+        session.merge(FeedSelection(user_id=user_id, paper_id=paper_id, post_ids=json.dumps(ids)))
+        session.commit()
+    return ids
+
+
+def _done_ids(paper_id: str, user_id: int) -> set[int]:
+    with db_session() as session:
+        return set(
+            session.exec(
+                select(PostView.post_id).where(
+                    PostView.paper_id == paper_id, PostView.user_id == user_id
+                )
+            )
+        )
 
 
 async def next_session(paper_id: str, user_id: int) -> FeedSession:
@@ -210,42 +334,31 @@ async def next_session(paper_id: str, user_id: int) -> FeedSession:
             build = session.get(FeedBuild, paper_id)
             return FeedSession(status=build.status, error=build.error)
 
+    ids = _selection(paper_id, user_id)
+    done = _done_ids(paper_id, user_id)
     with db_session() as session:
-        build = session.get(FeedBuild, paper_id)
-        concepts = json.loads(build.concepts)
-        posts = list(session.exec(select(Post).where(Post.paper_id == paper_id)))
-        seen_ids = set(
-            session.exec(
-                select(PostView.post_id).where(
-                    PostView.paper_id == paper_id, PostView.user_id == user_id
-                )
-            )
+        posts = {post.id: post for post in session.exec(select(Post).where(Post.id.in_(ids)))}
+    feed = [
+        FeedPost(
+            id=post_id,
+            done=post_id in done,
+            **PostDraft.model_validate_json(posts[post_id].data).model_dump(),
         )
+        for post_id in ids
+    ]
+    return FeedSession(status="ready", posts=feed, done=sum(post.done for post in feed))
 
-    unseen = [post for post in posts if post.id not in seen_ids]
-    gaps = await _gap_concepts(paper_id, user_id, concepts) if unseen else []
-    gap_rank = {name: rank for rank, name in enumerate(gaps)}
 
-    # Your gaps first, then from the foundations up; a concept's posts stay together.
-    unseen.sort(
-        key=lambda post: (
-            gap_rank.get(post.concept, len(gap_rank)),
-            post.concept_order,
-            post.id,
-        )
-    )
-
-    seen_concepts = {post.concept for post in posts if post.id in seen_ids}
-    return FeedSession(
-        status="ready",
-        posts=[
-            FeedPost(id=post.id, **PostDraft.model_validate_json(post.data).model_dump())
-            for post in unseen[:SESSION_SIZE]
-        ],
-        seen_concepts=len(seen_concepts),
-        total_concepts=len({post.concept for post in posts}),
-        remaining_posts=max(len(unseen) - SESSION_SIZE, 0),
-    )
+def feed_fraction(paper_id: str, user_id: int) -> float:
+    """Share of this user's feed they finished; 0 before it was opened."""
+    with db_session() as session:
+        row = session.get(FeedSelection, (user_id, paper_id))
+    if row is None:
+        return 0.0
+    ids = json.loads(row.post_ids)
+    if not ids:
+        return 0.0
+    return len(set(ids) & _done_ids(paper_id, user_id)) / len(ids)
 
 
 def record_view(post_id: int, correct: bool | None, user_id: int) -> None:

@@ -10,7 +10,7 @@ const scrollToTop = () => window.scrollTo({ top: 0 })
 
 /** A short, finite feed of posts about the paper's prerequisites. */
 export function FeedPage({ paperId }: Props) {
-  const { session, posts, done, error, load, markDone, allDone, progress } = useFeedSession(
+  const { session, posts, done, error, markDone, allDone, progress } = useFeedSession(
     paperId,
     scrollToTop,
   )
@@ -20,12 +20,12 @@ export function FeedPage({ paperId }: Props) {
       <header className="feed__header">
         <h1>Learning feed</h1>
         {session?.status === 'ready' && (
-          <div className="feed__progress" title={`${progress}% of concepts`}>
+          <div className="feed__progress" title={`${progress}% done`}>
             <div className="feed__bar">
               <div style={{ width: `${progress}%` }} />
             </div>
             <span>
-              {session.seen_concepts} of {session.total_concepts} concepts
+              {done.size} of {posts.length} done
             </span>
           </div>
         )}
@@ -54,24 +54,18 @@ export function FeedPage({ paperId }: Props) {
             key={post.id}
             post={post}
             onDone={(correct) => markDone(post.id, correct)}
+            finished={done.has(post.id)}
           />
         ))}
 
         {session?.status === 'ready' && (
           <section className={`feed__end${allDone ? ' is-complete' : ''}`}>
-            {posts.length === 0 ? (
-              <p>You’ve gone through every post for this paper. 🎉</p>
-            ) : allDone ? (
-              <p>Done for today. 🎉 Take a break, or keep going slowly.</p>
+            {allDone ? (
+              <p>All {posts.length} done. 🎉</p>
             ) : (
               <p>
-                {done.size} of {posts.length} done in this session.
+                {done.size} of {posts.length} done.
               </p>
-            )}
-            {session.remaining_posts > 0 && (
-              <button onClick={load} disabled={!allDone}>
-                8 more
-              </button>
             )}
           </section>
         )}
