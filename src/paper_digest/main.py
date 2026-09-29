@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from paper_digest.analyser.router import router as analyser_router
 from paper_digest.explainer.router import router as explainer_router
 from paper_digest.feed.router import router as feed_router
+from paper_digest.podcast.router import router as podcast_router
 from paper_digest.reader.router import router as reader_router
 from paper_digest.core.db import init_db
 from paper_digest.splitter.router import router as splitter_router
@@ -33,3 +34,4 @@ app.include_router(analyser_router)
 app.include_router(splitter_router)
 app.include_router(explainer_router)
 app.include_router(feed_router)
+app.include_router(podcast_router)
