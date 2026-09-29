@@ -14,6 +14,7 @@ logger = logging.getLogger("uvicorn.error")
 
 AUDIO_DIR = Path("data/podcasts")
 VOICES = {"host": "am_michael", "author": "af_heart"}
+TURN_PAUSE = 0.4
 
 _jobs: dict[str, asyncio.Task[None]] = {}
 _errors: dict[str, str] = {}
@@ -69,7 +70,7 @@ async def _generate(paper_id: str) -> None:
     try:
         script = await podcast_script(paper_id)
         set_audio_status(paper_id, "running")
-        turns = [(VOICES[line.speaker], line.text) for line in script.lines]
+        turns = [(VOICES[line.speaker], line.text, TURN_PAUSE) for line in script.lines]
         await asyncio.to_thread(synthesize, turns, audio_path(paper_id))
         set_audio_status(paper_id, "ready")
     except Exception as exc:

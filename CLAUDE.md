@@ -27,6 +27,8 @@ src/paper_digest/
   explainer/     # Explain, Summary (+ sections), Analogy, section Check, anchored Ask; one shared prompt cache; saves summaries + gap signals
   feed/          # Learning feed: splitter concepts -> posts (lesson/flip/quiz), gaps-first sessions of 8
   podcast/       # Host/author interview script (Sonnet) voiced by Kokoro into data/podcasts/<paper_id>.mp3
+  video/         # Explainer video storyboard (Sonnet): scenes of flow/equation/example/chart; example math computed by calculator.py, never by the model;
+                 # narration: Kokoro per sentence -> data/videos/<paper_id>.mp3 + sentence timings the player syncs to
   users/         # Accounts (scrypt hashes), cookie sessions, admin CRUD; every other router requires sign-in
                  # Per-user rows (user_id): Signal, PostView, Lookup, CheckAttempt, LibraryEntry.
                  # Per-paper rows stay shared: summary, feed posts, podcast.
@@ -39,11 +41,12 @@ web/src/
   feed/          # Feed page (/?feed=<paper_id>), post cards
   podcast/       # Podcast card on the reader: generate, play, transcript
   users/         # Login page, admin page (/?admin), user menu
+  video/         # Video page (/?video=<paper_id>): player driven by timeline.ts (sentences -> beats), visuals reveal by beat; 'All scenes' storyboard
 ```
 
 Rules:
 - A new feature goes into an existing domain or gets its own folder with its own `router.py` / `schemas.py`.
-- Each domain's router uses its domain name as the URL prefix (`/reader`, `/analyser`, `/splitter`, `/explainer`, `/feed`, `/podcast`).
+- Each domain's router uses its domain name as the URL prefix (`/reader`, `/analyser`, `/splitter`, `/explainer`, `/feed`, `/podcast`, `/video`).
 - Each domain owns its tables (`models.py`) and DB access (`store.py`). Papers are keyed by the sha256 of their extracted text.
 - Cross-domain imports are fine when they are one-way (e.g. `splitter` uses `analyser`); avoid cycles.
 - The frontend mirrors the backend domains under `web/src/<domain>/`.
