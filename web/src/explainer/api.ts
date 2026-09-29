@@ -1,8 +1,10 @@
 import type {
   Analogy,
   AskAnswer,
+  CheckAttempt,
   CheckResult,
   Explanation,
+  Lookup,
   Summary,
   ThreadMessage,
 } from './types'
@@ -60,6 +62,22 @@ export function ask(
     anchor,
     messages: messages.map(({ role, content }) => ({ role, content })),
   })
+}
+
+async function get<T>(path: string): Promise<T> {
+  const response = await fetch(`/api/explainer/${path}`)
+  if (!response.ok) throw new Error(`Request failed (${response.status}).`)
+  return response.json()
+}
+
+/** This user's lookups on a paper, newest first. */
+export function listLookups(paperId: string): Promise<Lookup[]> {
+  return get(`${paperId}/lookups`)
+}
+
+/** This user's check answers on a paper, newest first. */
+export function listChecks(paperId: string): Promise<CheckAttempt[]> {
+  return get(`${paperId}/checks`)
 }
 
 export function analogy(paperText: string, subject: string): Promise<Analogy> {

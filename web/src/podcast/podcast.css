@@ -1,15 +1,10 @@
 .podcast {
-  margin-bottom: 16px;
-  padding: 10px 12px;
   font-size: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
 }
 
-.podcast__header h3 {
+.podcast__title {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-weight: 600;
 }
 
 .podcast__hint {

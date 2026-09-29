@@ -12,7 +12,6 @@ type Props = {
 /** Problem / Idea / Result of the whole paper, prepared during warm-up. */
 export function SummaryCard({ paperText }: Props) {
   const [summary, setSummary] = useState<Summary | null>(null)
-  const [minimized, setMinimized] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -26,23 +25,11 @@ export function SummaryCard({ paperText }: Props) {
   }, [paperText])
 
   return (
-    <section className="summary">
-      <header className="summary__header">
-        <h3>Paper in 3 lines</h3>
-        <button
-          className="summary__close"
-          onClick={() => setMinimized((value) => !value)}
-          aria-label={minimized ? 'Expand summary' : 'Minimize summary'}
-          aria-expanded={!minimized}
-        >
-          {minimized ? '+' : '–'}
-        </button>
-      </header>
+    <div className="summary">
+      {error && <p className="analogy__error">{error}</p>}
+      {!summary && !error && <p className="analogy__status">Summarizing…</p>}
 
-      {!minimized && error && <p className="analogy__error">{error}</p>}
-      {!minimized && !summary && !error && <p className="analogy__status">Summarizing…</p>}
-
-      {!minimized && summary && (
+      {summary && (
         <div className="explanation">
           <dl className="summary__lines">
             <dt>Problem</dt>
@@ -64,6 +51,6 @@ export function SummaryCard({ paperText }: Props) {
           />
         </div>
       )}
-    </section>
+    </div>
   )
 }

@@ -3,7 +3,13 @@ import time
 
 from paper_digest.clients.claude import ask_claude, ask_claude_once, warm_claude
 from paper_digest.core.config import settings
-from paper_digest.explainer.store import add_signals, load_summary, save_summary
+from paper_digest.explainer.store import (
+    add_signals,
+    load_summary,
+    save_check,
+    save_lookup,
+    save_summary,
+)
 from paper_digest.reader.store import paper_id, save_paper
 from paper_digest.explainer.schemas import (
     AnalogyResponse,
@@ -157,12 +163,15 @@ async def _ask(paper_text: str, prompt: str, response_model):
 
 async def explain_selection(
     request: ExplainRequest,
+    user_id: int,
 ) -> ExplainResponse:
 
     cache_key = (paper_id(request.paper_text), _normalize(request.selection))
-    add_signals(cache_key[0], "lookup", [request.selection])
+    add_signals(cache_key[0], user_id, "lookup", [request.selection])
     if not request.guess and cache_key in _explanations:
-        return _explanations[cache_key]
+        answer = _explanations[cache_key]
+        save_lookup(user_id, cache_key[0], request.selection, None, answer)
+        return answer
 
     is_term = len(request.selection.split()) <= TERM_MAX_WORDS
     page_hint = f"The reader is on page {request.page}.\n" if request.page else ""
@@ -184,6 +193,7 @@ async def explain_selection(
     if not request.guess:
         _explanations[cache_key] = answer
 
+    save_lookup(user_id, cache_key[0], request.selection, request.guess, answer)
     return answer
 
 
@@ -230,6 +240,7 @@ async def check_understanding(
     paper_text: str,
     section_index: int,
     answer: str,
+    user_id: int,
 ) -> CheckResponse:
     sections = (await summarize_paper(paper_text)).sections
     if section_index >= len(sections):
@@ -266,18 +277,23 @@ async def check_understanding(
     else:
         level = "not_yet"
 
+    key = paper_id(paper_text)
     add_signals(
-        paper_id(paper_text),
+        key,
+        user_id,
         "missed_idea",
         [idea.idea for idea in ideas if not idea.covered],
     )
 
-    return CheckResponse(level=level, ideas=ideas)
+    response = CheckResponse(level=level, ideas=ideas)
+    save_check(user_id, key, section_index, answer, response)
+    return response
 
 
-async def answer_question(request: AskRequest) -> AskResponse:
+async def answer_question(request: AskRequest, user_id: int) -> AskResponse:
     add_signals(
         paper_id(request.paper_text),
+        user_id,
         "question",
         [f"{request.messages[-1].content} (about: {request.anchor})"],
     )

@@ -1,6 +1,13 @@
-from fastapi import APIRouter, HTTPException, Query, Response
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel
 
 from paper_digest.reader.pdf import PDFParserError, download_pdf
+from paper_digest.reader.store import list_library
+from paper_digest.users.auth import current_user
+from paper_digest.users.models import User
 
 
 router = APIRouter(
@@ -24,3 +31,20 @@ async def get_pdf(
         content=pdf_bytes,
         media_type="application/pdf",
     )
+
+
+class LibraryItem(BaseModel):
+    paper_id: str
+    source: str | None
+    last_opened: datetime
+
+
+@router.get("/library", response_model=list[LibraryItem])
+async def library(
+    user: Annotated[User, Depends(current_user)],
+) -> list[LibraryItem]:
+
+    return [
+        LibraryItem(paper_id=entry.paper_id, source=entry.source, last_opened=entry.last_opened)
+        for entry in list_library(user.id)
+    ]

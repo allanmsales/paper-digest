@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import { checkUnderstanding, summarize } from './api'
+import { checkUnderstanding, listChecks, summarize } from './api'
 import { AskThread } from './AskThread'
 import type { CheckResult, PaperSection } from './types'
 
@@ -14,12 +14,12 @@ type Attempt = { answer: string; result: CheckResult }
 
 type Props = {
   paperText: string
-  onClose: () => void
+  paperId: string | null
 }
 
 /** Section by section, the reader writes what they understood; each
  *  answer is graded against that section's key ideas. */
-export function CheckCard({ paperText, onClose }: Props) {
+export function CheckCard({ paperText, paperId }: Props) {
   const [sections, setSections] = useState<PaperSection[] | null>(null)
   const [current, setCurrent] = useState(0)
   const [attempts, setAttempts] = useState<Record<number, Attempt[]>>({})
@@ -37,6 +37,25 @@ export function CheckCard({ paperText, onClose }: Props) {
       active = false
     }
   }, [paperText])
+
+  // Earlier answers, so the path and history survive a reload.
+  useEffect(() => {
+    if (!paperId) return
+    let active = true
+    listChecks(paperId)
+      .then((saved) => {
+        if (!active) return
+        const grouped: Record<number, Attempt[]> = {}
+        for (const { section, answer, result } of saved) {
+          ;(grouped[section] ??= []).push({ answer, result })
+        }
+        setAttempts(grouped)
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [paperId])
 
   const sectionAttempts = attempts[current] ?? []
   const latest = sectionAttempts[0]
@@ -70,13 +89,7 @@ export function CheckCard({ paperText, onClose }: Props) {
   }
 
   return (
-    <section className="summary check">
-      <header className="summary__header">
-        <h3>Check your understanding</h3>
-        <button className="summary__close" onClick={onClose} aria-label="Close check">
-          ×
-        </button>
-      </header>
+    <div className="check">
 
       {!sections && !error && <p className="analogy__status">Loading sections…</p>}
 
@@ -165,6 +178,6 @@ export function CheckCard({ paperText, onClose }: Props) {
           </ul>
         </details>
       )}
-    </section>
+    </div>
   )
 }

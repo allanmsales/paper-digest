@@ -27,12 +27,18 @@ src/paper_digest/
   explainer/     # Explain, Summary (+ sections), Analogy, section Check, anchored Ask; one shared prompt cache; saves summaries + gap signals
   feed/          # Learning feed: splitter concepts -> posts (lesson/flip/quiz), gaps-first sessions of 8
   podcast/       # Host/author interview script (Sonnet) voiced by Kokoro into data/podcasts/<paper_id>.mp3
+  users/         # Accounts (scrypt hashes), cookie sessions, admin CRUD; every other router requires sign-in
+                 # Per-user rows (user_id): Signal, PostView, Lookup, CheckAttempt, LibraryEntry.
+                 # Per-paper rows stay shared: summary, feed posts, podcast.
+                 # init_db adds new nullable columns to existing tables; keep new columns nullable.
+                 # First admin: `uv run python -m paper_digest.users.cli <email> --admin`
 
 web/src/
   reader/        # PDF reader UI (same domain names as the backend)
   explainer/     # Explain popover, Summary card, Check card, Ask thread, Analogy, lookups panel
   feed/          # Feed page (/?feed=<paper_id>), post cards
   podcast/       # Podcast card on the reader: generate, play, transcript
+  users/         # Login page, admin page (/?admin), user menu
 ```
 
 Rules:

@@ -45,6 +45,13 @@ export type CheckResult = {
   ideas: { idea: string; covered: boolean; reread_at: string | null }[]
 }
 
+/** A saved check answer, newest first from the API. */
+export type CheckAttempt = {
+  section: number
+  answer: string
+  result: CheckResult
+}
+
 export type ThreadMessage = {
   role: 'reader' | 'assistant'
   content: string
