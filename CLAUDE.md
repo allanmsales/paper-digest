@@ -20,22 +20,24 @@ Shared, domain-agnostic code is the only exception:
 src/paper_digest/
   main.py        # FastAPI app; includes each domain's router
   core/          # config.py, db.py (SQLite via SQLModel, file in data/)
-  clients/       # claude.py: ask_claude/warm_claude (cached paper, Haiku), ask_claude_once (one-off, e.g. Sonnet summary), run_agent (Agent SDK)
+  clients/       # claude.py: ask_claude/warm_claude (cached paper, Haiku), ask_claude_once (one-off, e.g. Sonnet summary), run_agent (Agent SDK); tts.py: local Kokoro TTS (ONNX, model in data/models)
   reader/        # PDF fetching/parsing, Paper table (router, pdf.py, models.py, store.py)
   analyser/      # Paper Analyzer agent (router, schemas, agent)
   splitter/      # Subject Splitter agent + analyse→split pipeline (router, schemas, agent, service)
   explainer/     # Explain, Summary (+ sections), Analogy, section Check, anchored Ask; one shared prompt cache; saves summaries + gap signals
   feed/          # Learning feed: splitter concepts -> posts (lesson/flip/quiz), gaps-first sessions of 8
+  podcast/       # Host/author interview script (Sonnet) voiced by Kokoro into data/podcasts/<paper_id>.mp3
 
 web/src/
   reader/        # PDF reader UI (same domain names as the backend)
   explainer/     # Explain popover, Summary card, Check card, Ask thread, Analogy, lookups panel
   feed/          # Feed page (/?feed=<paper_id>), post cards
+  podcast/       # Podcast card on the reader: generate, play, transcript
 ```
 
 Rules:
 - A new feature goes into an existing domain or gets its own folder with its own `router.py` / `schemas.py`.
-- Each domain's router uses its domain name as the URL prefix (`/reader`, `/analyser`, `/splitter`, `/explainer`, `/feed`).
+- Each domain's router uses its domain name as the URL prefix (`/reader`, `/analyser`, `/splitter`, `/explainer`, `/feed`, `/podcast`).
 - Each domain owns its tables (`models.py`) and DB access (`store.py`). Papers are keyed by the sha256 of their extracted text.
 - Cross-domain imports are fine when they are one-way (e.g. `splitter` uses `analyser`); avoid cycles.
 - The frontend mirrors the backend domains under `web/src/<domain>/`.

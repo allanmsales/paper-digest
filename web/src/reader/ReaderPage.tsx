@@ -10,6 +10,7 @@ import { LookupsPanel } from '../explainer/LookupsPanel'
 import { SummaryCard } from '../explainer/SummaryCard'
 import type { Explanation, Lookup } from '../explainer/types'
 import { useTextSelection } from '../explainer/useTextSelection'
+import { PodcastCard } from '../podcast/PodcastCard'
 import '../explainer/explainer.css'
 import { PdfSourceForm } from './PdfSourceForm'
 import { PdfViewer } from './PdfViewer'
@@ -106,6 +107,7 @@ export function ReaderPage() {
           </div>
           <div className="reader__side">
             {paperText && <SummaryCard paperText={paperText} />}
+            {paperId && <PodcastCard key={paperId} paperId={paperId} />}
             {showCheck && paperText && (
               <CheckCard paperText={paperText} onClose={() => setShowCheck(false)} />
             )}
