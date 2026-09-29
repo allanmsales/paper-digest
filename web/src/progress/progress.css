@@ -1,0 +1,138 @@
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.progress__overall {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.progress__big {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress__caption {
+  color: var(--muted);
+}
+
+.progress__parts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progress__parts li {
+  display: grid;
+  grid-template-columns: 1fr 90px 36px;
+  gap: 8px;
+  align-items: center;
+}
+
+.progress__bar {
+  height: 6px;
+  overflow: hidden;
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.progress__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+.progress__value {
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.score {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.score__head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 4px;
+}
+
+.score__value {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.score__of {
+  color: var(--muted);
+}
+
+.score__verdict {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+.score__label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.score__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.score__list li {
+  padding-left: 18px;
+  text-indent: -18px;
+  line-height: 1.4;
+}
+
+.score__list--good li::before {
+  content: '✓ ';
+  color: #2e7d45;
+}
+
+.score__list--todo li::before {
+  content: '→ ';
+  color: #b7791f;
+}
+
+.score__go {
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-indent: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.score__date {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}

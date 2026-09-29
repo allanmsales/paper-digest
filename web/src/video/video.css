@@ -1,0 +1,465 @@
+/* Flow */
+.flow {
+  width: 100%;
+  height: auto;
+}
+
+.flow__node {
+  fill: #1f2630;
+  stroke: #7fb0e0;
+  stroke-width: 1.5;
+}
+
+.flow__label {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 4px 10px;
+  font-size: 13px;
+  line-height: 1.25;
+  color: #e8eaed;
+  text-align: center;
+}
+
+.flow__edge {
+  stroke: #9aa0a6;
+  stroke-width: 1.5;
+}
+
+.flow__arrowhead {
+  fill: #9aa0a6;
+}
+
+.flow__edge-label {
+  font-size: 11px;
+  fill: #9aa0a6;
+}
+
+.flow__badge {
+  fill: #f2c14e;
+}
+
+.flow__badge-text {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #15181d;
+}
+
+/* Equation */
+.equation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 640px;
+}
+
+.equation__main {
+  font-size: 22px;
+  text-align: center;
+}
+
+.equation__terms {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.equation__terms div {
+  display: grid;
+  grid-template-columns: minmax(80px, auto) 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.equation__terms dt {
+  color: #f2c14e;
+  text-align: right;
+}
+
+.equation__terms dd {
+  margin: 0;
+  font-size: 14px;
+  color: #c9ccd1;
+}
+
+/* Worked example */
+.example {
+  width: 100%;
+  max-width: 640px;
+}
+
+.example table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.example td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #2a313b;
+  vertical-align: top;
+}
+
+.example__name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #9aa0a6;
+}
+
+.example__value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.example__step .example__value {
+  color: #f2c14e;
+  font-weight: 700;
+}
+
+.example__meaning code {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #9aa0a6;
+}
+
+.example__error {
+  display: block;
+  color: #f97066;
+  font-size: 12px;
+}
+
+.example__takeaway {
+  margin: 16px 0 0;
+  font-size: 15px;
+  text-align: center;
+}
+
+/* Chart */
+.chart {
+  width: 100%;
+  max-width: 640px;
+  margin: 0;
+}
+
+.chart figcaption {
+  margin-bottom: 14px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.chart figcaption span {
+  font-weight: 400;
+  color: #9aa0a6;
+}
+
+.chart__row {
+  display: grid;
+  grid-template-columns: minmax(90px, 180px) 1fr 56px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.chart__label {
+  color: #c9ccd1;
+  text-align: right;
+}
+
+.chart__track {
+  height: 18px;
+  background: #1f2630;
+  border-radius: 4px;
+}
+
+.chart__bar {
+  height: 100%;
+  background: #7fb0e0;
+  border-radius: 4px;
+}
+
+.chart__value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+
+/* Player */
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player__chip {
+  justify-self: start;
+  padding: 3px 10px;
+  font-size: 13px;
+  color: #c9ccd1;
+  background: #1f2630;
+  border-radius: 999px;
+}
+
+.player__visual {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  animation: scene-in 0.5s ease-out;
+}
+
+.player__visual .flow {
+  max-height: 100%;
+}
+
+.player__caption {
+  justify-self: center;
+  max-width: 90%;
+  margin: 8px 0 0;
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  animation: caption-in 0.3s ease-out;
+}
+
+.player__overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.player__overlay span {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  font-size: 26px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+}
+
+.player__controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.player__controls button {
+  min-width: 34px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.player__scrubber {
+  position: relative;
+  flex: 1;
+}
+
+.player__scrubber input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.player__marks span {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 6px;
+  background: var(--muted);
+  pointer-events: none;
+}
+
+.player__time {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* Reveal states shared by the visuals */
+.reveal,
+.flow__group,
+.flow__edge-group {
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.reveal.is-hidden {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.flow__group.is-hidden,
+.flow__edge-group.is-hidden {
+  opacity: 0.12;
+}
+
+.flow__group.is-current .flow__node {
+  fill: #2b3a4d;
+  stroke: #f2c14e;
+  stroke-width: 2.5;
+}
+
+.reveal.is-current dt,
+.reveal.is-current dd {
+  color: #f2c14e;
+}
+
+.example__step.is-current .example__value {
+  text-shadow: 0 0 12px rgba(242, 193, 78, 0.6);
+}
+
+.chart__bar {
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chart__row .chart__value {
+  transition: opacity 0.4s ease 0.4s;
+}
+
+.chart__row.is-empty .chart__value {
+  opacity: 0;
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes caption-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .flow__group,
+  .flow__edge-group,
+  .chart__bar,
+  .player__visual,
+  .player__caption {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* The player scales wide flows down; larger labels stay readable. */
+.player__visual .flow__label {
+  font-size: 15px;
+}
+
+.narration-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.narration-bar button {
+  padding: 4px 12px;
+  font: inherit;
+  color: var(--surface);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Player: a fixed 960x540 stage scaled to fit its frame, like a video. */
+.player {
+  outline: none;
+}
+
+.player:focus-visible .player__frame {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.player__frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #15181d;
+  border-radius: 10px;
+}
+
+.player__stage {
+  position: absolute;
+  top: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  width: 960px;
+  height: 540px;
+  padding: 20px 32px 16px;
+  color: #e8eaed;
+  transform-origin: top left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.player__caption {
+  font-size: 22px;
+}
+
+.player__chip {
+  font-size: 16px;
+}
+
+.player__controls button {
+  min-width: 30px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.player__time {
+  font-size: 12px;
+}
+
+/* In the side column */
+.video-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.video-widget__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.video-widget__title {
+  font-weight: 600;
+}
+
+.video-widget__expand {
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
