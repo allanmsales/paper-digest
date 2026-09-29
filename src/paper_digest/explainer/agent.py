@@ -1,9 +1,10 @@
 import asyncio
-import hashlib
 import time
 
 from paper_digest.clients.claude import ask_claude, ask_claude_once, warm_claude
 from paper_digest.core.config import settings
+from paper_digest.explainer.store import add_signals, load_summary, save_summary
+from paper_digest.reader.store import paper_id, save_paper
 from paper_digest.explainer.schemas import (
     AnalogyResponse,
     AskRequest,
@@ -129,10 +130,6 @@ _analogies: dict[tuple[str, str], AnalogyResponse] = {}
 _warmed_at: dict[str, float] = {}
 
 
-def _paper_key(paper_text: str) -> str:
-    return hashlib.sha256(paper_text.encode()).hexdigest()
-
-
 def _normalize(text: str) -> str:
     return " ".join(text.lower().split())
 
@@ -162,7 +159,8 @@ async def explain_selection(
     request: ExplainRequest,
 ) -> ExplainResponse:
 
-    cache_key = (_paper_key(request.paper_text), _normalize(request.selection))
+    cache_key = (paper_id(request.paper_text), _normalize(request.selection))
+    add_signals(cache_key[0], "lookup", [request.selection])
     if not request.guess and cache_key in _explanations:
         return _explanations[cache_key]
 
@@ -192,16 +190,9 @@ async def explain_selection(
 async def summarize_paper(paper_text: str) -> SummaryResponse:
     # Runs once per paper on the stronger model: plain rewriting is where
     # the cheaper model keeps slipping back into the paper's jargon.
-    key = _paper_key(paper_text)
+    key = paper_id(paper_text)
     if key not in _summaries:
-        _summaries[key] = asyncio.create_task(
-            ask_claude_once(
-                model=settings.summary_model,
-                system=SYSTEM_PROMPT + f"\n<PAPER>\n{paper_text}\n</PAPER>",
-                prompt=SUMMARY_TASK,
-                response_model=SummaryResponse,
-            )
-        )
+        _summaries[key] = asyncio.create_task(_load_or_create_summary(key, paper_text))
     try:
         return await asyncio.shield(_summaries[key])
     except Exception:
@@ -210,8 +201,22 @@ async def summarize_paper(paper_text: str) -> SummaryResponse:
         raise
 
 
+async def _load_or_create_summary(key: str, paper_text: str) -> SummaryResponse:
+    # Saved, so sections and key ideas stay the same across restarts.
+    summary = load_summary(key)
+    if summary is None:
+        summary = await ask_claude_once(
+            model=settings.summary_model,
+            system=SYSTEM_PROMPT + f"\n<PAPER>\n{paper_text}\n</PAPER>",
+            prompt=SUMMARY_TASK,
+            response_model=SummaryResponse,
+        )
+        save_summary(key, summary)
+    return summary
+
+
 async def explain_by_analogy(paper_text: str, subject: str) -> AnalogyResponse:
-    cache_key = (_paper_key(paper_text), _normalize(subject))
+    cache_key = (paper_id(paper_text), _normalize(subject))
     if cache_key not in _analogies:
         _analogies[cache_key] = await _ask(
             paper_text,
@@ -261,10 +266,22 @@ async def check_understanding(
     else:
         level = "not_yet"
 
+    add_signals(
+        paper_id(paper_text),
+        "missed_idea",
+        [idea.idea for idea in ideas if not idea.covered],
+    )
+
     return CheckResponse(level=level, ideas=ideas)
 
 
 async def answer_question(request: AskRequest) -> AskResponse:
+    add_signals(
+        paper_id(request.paper_text),
+        "question",
+        [f"{request.messages[-1].content} (about: {request.anchor})"],
+    )
+
     speaker = {"reader": "Reader", "assistant": "You"}
     conversation = "\n".join(
         f"{speaker[message.role]}: {message.content}" for message in request.messages
@@ -279,10 +296,14 @@ async def answer_question(request: AskRequest) -> AskResponse:
     )
 
 
+def register_paper(paper_text: str, source: str | None) -> str:
+    return save_paper(paper_text, source)
+
+
 async def warm_paper(paper_text: str) -> None:
     """Writes the paper to the prompt cache and prepares its summary,
     so the first lookup is fast and the Summary button is instant."""
-    key = _paper_key(paper_text)
+    key = paper_id(paper_text)
     now = time.monotonic()
     if now - _warmed_at.get(key, float("-inf")) < WARM_INTERVAL_SECONDS:
         return

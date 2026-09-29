@@ -50,6 +50,7 @@
 }
 
 .reader__summary-button {
+  text-decoration: none;
   padding: 8px 14px;
   font: inherit;
   font-size: 14px;
