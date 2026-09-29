@@ -47,19 +47,27 @@ def _get_kokoro() -> Kokoro:
         return _kokoro
 
 
-def synthesize(turns: list[tuple[str, str]], out_path: Path, pause_seconds: float = 0.4) -> None:
-    """Speaks each (voice, text) turn and writes them, with a pause between
-    turns, to one MP3. Blocking and CPU-bound: run it in a thread."""
+def synthesize(
+    segments: list[tuple[str, str, float]], out_path: Path
+) -> list[tuple[float, float]]:
+    """Speaks each (voice, text, pause_after_seconds) segment and writes them
+    to one MP3. Returns each segment's (start, end) in seconds, so a player
+    can sync to it. Blocking and CPU-bound: run it in a thread."""
 
     kokoro = _get_kokoro()
     chunks: list[np.ndarray] = []
+    spans: list[tuple[float, float]] = []
     sample_rate = 24000
-    for voice, text in turns:
+    position = 0
+    for voice, text, pause_seconds in segments:
         samples, sample_rate = kokoro.create(text, voice=voice)
-        chunks.append(samples)
-        chunks.append(np.zeros(int(pause_seconds * sample_rate), dtype=np.float32))
+        spans.append((position / sample_rate, (position + len(samples)) / sample_rate))
+        silence = np.zeros(int(pause_seconds * sample_rate), dtype=np.float32)
+        chunks += [samples, silence]
+        position += len(samples) + len(silence)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     partial = out_path.with_suffix(".part.mp3")
     sf.write(partial, np.concatenate(chunks), sample_rate, format="MP3")
     partial.rename(out_path)
+    return spans

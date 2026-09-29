@@ -27,7 +27,7 @@ type Props = {
   user: User
 }
 
-type SectionId = 'summary' | 'feed' | 'check' | 'podcast' | 'lookups'
+type SectionId = 'summary' | 'feed' | 'check' | 'podcast' | 'video' | 'lookups'
 
 // Per-browser layout preferences; the page works without them.
 function loadPref<T extends string>(key: string, fallback: T): T {
@@ -198,6 +198,20 @@ export function ReaderPage({ user }: Props) {
                   'Podcast',
                   paperId ? (
                     <PodcastCard key={paperId} paperId={paperId} />
+                  ) : (
+                    <p className="analogy__status">Reading the paper…</p>
+                  ),
+                )}
+                {section(
+                  'video',
+                  'Explainer video',
+                  paperId ? (
+                    <p className="podcast__hint">
+                      The paper's main flow and math, animated scene by scene.{' '}
+                      <a href={`/?video=${paperId}`} target="_blank" rel="noreferrer">
+                        Watch ↗
+                      </a>
+                    </p>
                   ) : (
                     <p className="analogy__status">Reading the paper…</p>
                   ),

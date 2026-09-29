@@ -12,6 +12,7 @@ from paper_digest.splitter.router import router as splitter_router
 from paper_digest.users.auth import current_user
 from paper_digest.users.router import router as users_router
 from paper_digest.users.store import claim_unowned_rows
+from paper_digest.video.router import router as video_router
 
 
 @asynccontextmanager
@@ -43,3 +44,4 @@ app.include_router(splitter_router, dependencies=signed_in)
 app.include_router(explainer_router, dependencies=signed_in)
 app.include_router(feed_router, dependencies=signed_in)
 app.include_router(podcast_router, dependencies=signed_in)
+app.include_router(video_router, dependencies=signed_in)

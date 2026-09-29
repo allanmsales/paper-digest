@@ -6,6 +6,7 @@ import { AdminPage } from './users/AdminPage'
 import { me } from './users/api'
 import { LoginPage } from './users/LoginPage'
 import type { User } from './users/types'
+import { VideoPage } from './video/VideoPage'
 
 export default function App() {
   // undefined while checking the session, null when signed out.
@@ -23,6 +24,8 @@ export default function App() {
   const params = new URLSearchParams(window.location.search)
   const feedPaperId = params.get('feed')
   if (feedPaperId) return <FeedPage paperId={feedPaperId} />
+  const videoPaperId = params.get('video')
+  if (videoPaperId) return <VideoPage paperId={videoPaperId} />
   if (params.has('admin') && user.is_admin) return <AdminPage user={user} />
   return <ReaderPage user={user} />
 }
