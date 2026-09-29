@@ -28,5 +28,6 @@ class PostView(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     post_id: int = Field(index=True)
     paper_id: str = Field(index=True)
+    user_id: int | None = Field(default=None, index=True)
     correct: bool | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

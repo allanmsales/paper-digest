@@ -1,0 +1,200 @@
+.login {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 16px;
+}
+
+.login__card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.login__card h1 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.login__card label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.login input,
+.admin input[type='email'],
+.admin input[type='password'] {
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.users__primary {
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--surface);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.users__primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.users__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.users__notice {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 13px;
+}
+
+.user-menu__email {
+  color: var(--muted);
+}
+
+.user-menu a,
+.user-menu button,
+.admin__actions button,
+.admin__back {
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.admin__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.admin__header h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.admin__main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.admin__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.admin__table th,
+.admin__table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin__table th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.admin__actions {
+  text-align: right;
+}
+
+.admin__actions > button + button,
+.admin__actions form {
+  margin-left: 12px;
+}
+
+.admin__actions form {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin__danger {
+  color: var(--danger) !important;
+}
+
+.admin__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.admin__add h2 {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 14px;
+}
+
+.admin__add input[type='email'],
+.admin__add input[type='password'] {
+  flex: 1 1 180px;
+}
+
+.admin__check {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .admin__actions form {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 4px 0 0;
+  }
+}

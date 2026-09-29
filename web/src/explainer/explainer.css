@@ -197,13 +197,9 @@
   font-size: 13px;
 }
 
-.summary {
-  margin-bottom: 16px;
-  padding: 10px 12px;
+.summary,
+.check {
   font-size: 14px;
-  background: var(--surface);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
 }
 
 .summary__header {
@@ -459,11 +455,6 @@
 
 /* Lookups panel */
 .lookups {
-  font-size: 14px;
-}
-
-.lookups h3 {
-  margin: 0 0 8px;
   font-size: 14px;
 }
 

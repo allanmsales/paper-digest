@@ -155,3 +155,16 @@ class AskResponse(BaseModel):
         default=None,
         description='Where the paper explains it, e.g. "Section 3, page 5". Null if nowhere.',
     )
+
+
+class SavedLookup(BaseModel):
+    id: int
+    selection: str
+    guess: str | None
+    result: ExplainResponse
+
+
+class SavedCheck(BaseModel):
+    section: int
+    answer: str
+    result: CheckResponse

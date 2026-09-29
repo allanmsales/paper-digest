@@ -1,4 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from paper_digest.explainer.agent import (
     answer_question,
@@ -9,6 +11,10 @@ from paper_digest.explainer.agent import (
     summarize_paper,
     warm_paper,
 )
+from paper_digest.explainer.store import list_checks, list_lookups
+from paper_digest.reader.store import record_open
+from paper_digest.users.auth import current_user
+from paper_digest.users.models import User
 from paper_digest.explainer.schemas import (
     AnalogyRequest,
     AnalogyResponse,
@@ -19,6 +25,8 @@ from paper_digest.explainer.schemas import (
     ExplainRequest,
     ExplainResponse,
     PaperRequest,
+    SavedCheck,
+    SavedLookup,
     SummaryResponse,
     WarmResponse,
 )
@@ -36,9 +44,10 @@ router = APIRouter(
 )
 async def explain(
     request: ExplainRequest,
+    user: Annotated[User, Depends(current_user)],
 ) -> ExplainResponse:
 
-    return await explain_selection(request)
+    return await explain_selection(request, user.id)
 
 
 @router.post(
@@ -69,6 +78,7 @@ async def analogy(
 )
 async def check(
     request: CheckRequest,
+    user: Annotated[User, Depends(current_user)],
 ) -> CheckResponse:
 
     try:
@@ -76,6 +86,7 @@ async def check(
             request.paper_text,
             request.section,
             request.answer,
+            user.id,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -87,9 +98,10 @@ async def check(
 )
 async def ask(
     request: AskRequest,
+    user: Annotated[User, Depends(current_user)],
 ) -> AskResponse:
 
-    return await answer_question(request)
+    return await answer_question(request, user.id)
 
 
 @router.post(
@@ -100,9 +112,35 @@ async def ask(
 async def warm(
     request: PaperRequest,
     background_tasks: BackgroundTasks,
+    user: Annotated[User, Depends(current_user)],
 ) -> WarmResponse:
 
     key = register_paper(request.paper_text, request.source)
+    record_open(user.id, key, request.source)
     background_tasks.add_task(warm_paper, request.paper_text)
 
     return WarmResponse(status="warming", paper_id=key)
+
+
+@router.get(
+    "/{paper_id}/lookups",
+    response_model=list[SavedLookup],
+)
+async def lookups(
+    paper_id: str,
+    user: Annotated[User, Depends(current_user)],
+) -> list[SavedLookup]:
+
+    return list_lookups(user.id, paper_id)
+
+
+@router.get(
+    "/{paper_id}/checks",
+    response_model=list[SavedCheck],
+)
+async def checks(
+    paper_id: str,
+    user: Annotated[User, Depends(current_user)],
+) -> list[SavedCheck]:
+
+    return list_checks(user.id, paper_id)

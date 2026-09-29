@@ -8,8 +8,7 @@ type Props = {
 
 export function LookupsPanel({ lookups, paperText }: Props) {
   return (
-    <aside className="lookups">
-      <h3>Your lookups ({lookups.length})</h3>
+    <div className="lookups">
       {lookups.length === 0 ? (
         <p className="lookups__empty">
           Select any text in the paper and click “Explain”. Everything you look up is kept
@@ -36,6 +35,6 @@ export function LookupsPanel({ lookups, paperText }: Props) {
           ))}
         </ul>
       )}
-    </aside>
+    </div>
   )
 }

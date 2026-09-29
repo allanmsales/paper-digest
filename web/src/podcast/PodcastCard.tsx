@@ -64,10 +64,8 @@ export function PodcastCard({ paperId }: Props) {
   }
 
   return (
-    <section className="podcast">
-      <header className="podcast__header">
-        <h3>{script?.title ?? 'Podcast'}</h3>
-      </header>
+    <div className="podcast">
+      {script && <p className="podcast__title">{script.title}</p>}
 
       {error && <p className="analogy__error">{error}</p>}
 
@@ -112,6 +110,6 @@ export function PodcastCard({ paperId }: Props) {
           )}
         </>
       )}
-    </section>
+    </div>
   )
 }

@@ -1,54 +1,19 @@
-import { useCallback, useEffect, useState } from 'react'
-
-import { fetchSession, recordView } from './api'
 import { PostCard } from './PostCard'
-import type { FeedSession } from './types'
+import { useFeedSession } from './useFeedSession'
 import './feed.css'
-
-const POLL_MS = 10_000
 
 type Props = {
   paperId: string
 }
 
+const scrollToTop = () => window.scrollTo({ top: 0 })
+
 /** A short, finite feed of posts about the paper's prerequisites. */
 export function FeedPage({ paperId }: Props) {
-  const [session, setSession] = useState<FeedSession | null>(null)
-  const [done, setDone] = useState<Set<number>>(new Set())
-  const [error, setError] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    try {
-      setSession(await fetchSession(paperId))
-      setDone(new Set())
-      setError(null)
-      window.scrollTo({ top: 0 })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not load the feed.')
-    }
-  }, [paperId])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  // The first build takes a few minutes: poll until it's ready.
-  useEffect(() => {
-    if (session?.status !== 'building') return
-    const timer = window.setTimeout(load, POLL_MS)
-    return () => window.clearTimeout(timer)
-  }, [session, load])
-
-  function handleDone(postId: number, correct: boolean | null) {
-    recordView(postId, correct)
-    setDone((current) => new Set(current).add(postId))
-  }
-
-  const posts = session?.posts ?? []
-  const allDone = posts.length > 0 && posts.every((post) => done.has(post.id))
-  const progress = session?.total_concepts
-    ? Math.round((session.seen_concepts / session.total_concepts) * 100)
-    : 0
+  const { session, posts, done, error, load, markDone, allDone, progress } = useFeedSession(
+    paperId,
+    scrollToTop,
+  )
 
   return (
     <div className="feed">
@@ -88,7 +53,7 @@ export function FeedPage({ paperId }: Props) {
           <PostCard
             key={post.id}
             post={post}
-            onDone={(correct) => handleDone(post.id, correct)}
+            onDone={(correct) => markDone(post.id, correct)}
           />
         ))}
 

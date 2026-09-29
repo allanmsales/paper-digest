@@ -45,8 +45,12 @@ def last_error(paper_id: str) -> str | None:
 
 
 def _describe(exc: Exception) -> str:
-    if isinstance(exc, anthropic.AuthenticationError) or "credential" in str(exc):
+    if isinstance(exc, anthropic.AuthenticationError):
         return "The Claude API key was rejected. Check ANTHROPIC_API_KEY in .env."
+    if isinstance(exc, anthropic.APIConnectionError | anthropic.RateLimitError) or (
+        isinstance(exc, anthropic.APIStatusError) and exc.status_code >= 500
+    ):
+        return "Claude is having problems right now (status.claude.com). Try again later."
     if isinstance(exc, anthropic.APIError):
         return f"The Claude API failed: {exc.message}"
     return "Voicing the episode failed. See the API logs."

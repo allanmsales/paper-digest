@@ -161,15 +161,18 @@ async def _run_build(paper_id: str) -> None:
 def start_build(paper_id: str, retry: bool = False) -> str:
     """Starts building the feed once per paper; returns its status.
 
-    A failed build is only restarted with `retry`, so polling never loops
-    on a failing (paid) build.
+    A ready feed is never rebuilt (that would drop every reader's
+    progress). A failed build is only restarted with `retry`, so polling
+    never loops on a failing (paid) build.
     """
     with db_session() as session:
         build = session.get(FeedBuild, paper_id)
         if paper_id in _builds:
             return "building"
-        if build and build.status in ("ready", "error") and not retry:
-            return build.status
+        if build and build.status == "ready":
+            return "ready"
+        if build and build.status == "error" and not retry:
+            return "error"
         if build is None:
             build = FeedBuild(paper_id=paper_id)
         build.status, build.error = "building", None
@@ -180,8 +183,8 @@ def start_build(paper_id: str, retry: bool = False) -> str:
     return "building"
 
 
-async def _gap_concepts(paper_id: str, concepts: list[str]) -> list[str]:
-    signals = list_signals(paper_id)[:30]
+async def _gap_concepts(paper_id: str, user_id: int, concepts: list[str]) -> list[str]:
+    signals = list_signals(paper_id, user_id)[:30]
     if not signals:
         return []
     struggles = "\n".join(f"- ({signal.kind}) {signal.text}" for signal in signals)
@@ -200,7 +203,7 @@ async def _gap_concepts(paper_id: str, concepts: list[str]) -> list[str]:
     return [name for name in result.concepts if name in known]
 
 
-async def next_session(paper_id: str) -> FeedSession:
+async def next_session(paper_id: str, user_id: int) -> FeedSession:
     status = start_build(paper_id)
     if status != "ready":
         with db_session() as session:
@@ -212,11 +215,15 @@ async def next_session(paper_id: str) -> FeedSession:
         concepts = json.loads(build.concepts)
         posts = list(session.exec(select(Post).where(Post.paper_id == paper_id)))
         seen_ids = set(
-            session.exec(select(PostView.post_id).where(PostView.paper_id == paper_id))
+            session.exec(
+                select(PostView.post_id).where(
+                    PostView.paper_id == paper_id, PostView.user_id == user_id
+                )
+            )
         )
 
     unseen = [post for post in posts if post.id not in seen_ids]
-    gaps = await _gap_concepts(paper_id, concepts) if unseen else []
+    gaps = await _gap_concepts(paper_id, user_id, concepts) if unseen else []
     gap_rank = {name: rank for rank, name in enumerate(gaps)}
 
     # Your gaps first, then from the foundations up; a concept's posts stay together.
@@ -241,10 +248,12 @@ async def next_session(paper_id: str) -> FeedSession:
     )
 
 
-def record_view(post_id: int, correct: bool | None) -> None:
+def record_view(post_id: int, correct: bool | None, user_id: int) -> None:
     with db_session() as session:
         post = session.get(Post, post_id)
         if post is None:
             raise ValueError("Unknown post.")
-        session.add(PostView(post_id=post_id, paper_id=post.paper_id, correct=correct))
+        session.add(
+            PostView(post_id=post_id, paper_id=post.paper_id, user_id=user_id, correct=correct)
+        )
         session.commit()

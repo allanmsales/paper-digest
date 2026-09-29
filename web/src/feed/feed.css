@@ -163,3 +163,63 @@
   color: var(--text);
   border-style: solid;
 }
+
+/* Feed inside the reader's side column */
+.feed-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feed-panel .feed__bar {
+  flex: 1;
+}
+
+.feed-panel .post {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+.feed-panel .post__title {
+  font-size: 15px;
+}
+
+.feed-panel .post__body,
+.feed-panel .post__back {
+  font-size: 14px;
+}
+
+.feed-panel .feed__end {
+  margin: 0;
+}
+
+.feed-panel__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.feed-panel__nav button,
+.feed-panel__full {
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.feed-panel__nav button:disabled {
+  color: var(--muted);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.feed-panel__full {
+  align-self: flex-end;
+}
