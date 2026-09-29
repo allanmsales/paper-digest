@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 
 import { checkUnderstanding, listChecks, summarize } from './api'
 import { AskThread } from './AskThread'
+import { notifyProgress } from '../progress/events'
 import type { CheckResult, PaperSection } from './types'
 
 const LEVEL_LABEL: Record<CheckResult['level'], string> = {
@@ -81,6 +82,7 @@ export function CheckCard({ paperText, paperId }: Props) {
         [current]: [{ answer: text, result }, ...(all[current] ?? [])],
       }))
       setAnswer('')
+      notifyProgress()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
     } finally {

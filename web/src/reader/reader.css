@@ -306,3 +306,120 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Full screen overlay; children stay mounted when it closes. */
+.fullscreen.is-open {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 24px 24px;
+  background: var(--bg);
+}
+
+.fullscreen__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.fullscreen__header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.fullscreen__close {
+  padding: 0 10px;
+  font-size: 26px;
+  line-height: 1.2;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fullscreen.is-open .fullscreen__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* A video in full screen fills the space above its controls. */
+.fullscreen.is-open .player {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.fullscreen.is-open .player__frame {
+  flex: 1;
+  aspect-ratio: auto;
+  min-height: 0;
+}
+
+.fullscreen.is-open .player__controls button {
+  min-width: 36px;
+  padding: 5px 10px;
+  font-size: 14px;
+}
+
+body.has-fullscreen .reader__side {
+  z-index: 200;
+}
+
+.side-section__count.is-done {
+  color: var(--surface);
+  background: var(--accent);
+}
+
+/* Column groups */
+.side-group {
+  margin: 6px 2px -2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.side-group:first-of-type {
+  margin-top: 0;
+}
+
+/* Reading step */
+.reading {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.reading__hint {
+  margin: 0;
+  color: var(--muted);
+}
+
+.reading__pages {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.reading__done {
+  margin: 0;
+  font-weight: 600;
+  color: #2e7d45;
+}
+
+.summary__confirm {
+  align-self: flex-start;
+  margin-top: 10px;
+}

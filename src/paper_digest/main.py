@@ -6,6 +6,7 @@ from paper_digest.analyser.router import router as analyser_router
 from paper_digest.explainer.router import router as explainer_router
 from paper_digest.feed.router import router as feed_router
 from paper_digest.podcast.router import router as podcast_router
+from paper_digest.progress.router import router as progress_router
 from paper_digest.reader.router import router as reader_router
 from paper_digest.core.db import init_db
 from paper_digest.splitter.router import router as splitter_router
@@ -45,3 +46,4 @@ app.include_router(explainer_router, dependencies=signed_in)
 app.include_router(feed_router, dependencies=signed_in)
 app.include_router(podcast_router, dependencies=signed_in)
 app.include_router(video_router, dependencies=signed_in)
+app.include_router(progress_router, dependencies=signed_in)

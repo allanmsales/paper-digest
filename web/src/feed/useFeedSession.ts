@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { fetchSession, recordView } from './api'
+import { notifyProgress } from '../progress/events'
 import type { FeedSession } from './types'
 
 const POLL_MS = 10_000
 
-/** Loads a session of posts (polling while the feed is being built) and
- *  tracks which posts the reader finished. */
+/** Loads the user's feed (polling while it is being built) and tracks
+ *  which posts they finished, including earlier visits. */
 export function useFeedSession(paperId: string, onLoad?: () => void) {
   const [session, setSession] = useState<FeedSession | null>(null)
   const [done, setDone] = useState<Set<number>>(new Set())
@@ -14,8 +15,9 @@ export function useFeedSession(paperId: string, onLoad?: () => void) {
 
   const load = useCallback(async () => {
     try {
-      setSession(await fetchSession(paperId))
-      setDone(new Set())
+      const result = await fetchSession(paperId)
+      setSession(result)
+      setDone(new Set(result.posts.filter((post) => post.done).map((post) => post.id)))
       setError(null)
       onLoad?.()
     } catch (err) {
@@ -36,15 +38,13 @@ export function useFeedSession(paperId: string, onLoad?: () => void) {
 
   function markDone(postId: number, correct: boolean | null) {
     if (done.has(postId)) return
-    recordView(postId, correct)
+    recordView(postId, correct).then(notifyProgress)
     setDone((current) => new Set(current).add(postId))
   }
 
   const posts = session?.posts ?? []
   const allDone = posts.length > 0 && posts.every((post) => done.has(post.id))
-  const progress = session?.total_concepts
-    ? Math.round((session.seen_concepts / session.total_concepts) * 100)
-    : 0
+  const progress = posts.length ? Math.round((done.size / posts.length) * 100) : 0
 
-  return { session, posts, done, error, load, markDone, allDone, progress }
+  return { session, posts, done, error, markDone, allDone, progress }
 }

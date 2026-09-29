@@ -12,13 +12,17 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString()
 
 const MAX_PAGE_WIDTH = 900
+// A page counts as read after half of it stayed on screen this long.
+const PAGE_READ_MS = 5000
 
 type Props = {
   source: PdfSource
   onDocumentLoad?: (pdf: PDFDocumentProxy) => void
+  /** Called once per page the reader looked at long enough. */
+  onPageRead?: (pageIndex: number, pageCount: number) => void
 }
 
-export function PdfViewer({ source, onDocumentLoad }: Props) {
+export function PdfViewer({ source, onDocumentLoad, onPageRead }: Props) {
   const [numPages, setNumPages] = useState(0)
   const { file, error: fetchError } = usePdfFile(source)
   const [renderError, setRenderError] = useState<string | null>(null)
@@ -26,6 +30,7 @@ export function PdfViewer({ source, onDocumentLoad }: Props) {
   const pageWidth = useContainerWidth(containerRef, MAX_PAGE_WIDTH)
 
   const error = fetchError ?? renderError
+  usePageReadTracker(containerRef, numPages, onPageRead)
 
   return (
     <div className="pdf-viewer" ref={containerRef}>
@@ -47,7 +52,7 @@ export function PdfViewer({ source, onDocumentLoad }: Props) {
           error={null}
         >
           {Array.from({ length: numPages }, (_, index) => (
-            <div className="pdf-viewer__page" key={index}>
+            <div className="pdf-viewer__page" key={index} data-page-index={index}>
               <Page pageNumber={index + 1} width={pageWidth} />
               <span className="pdf-viewer__page-number">
                 {index + 1} / {numPages}
@@ -102,6 +107,54 @@ function usePdfFile(source: PdfSource): {
   }, [source])
 
   return state
+}
+
+function usePageReadTracker(
+  ref: React.RefObject<HTMLElement | null>,
+  numPages: number,
+  onPageRead?: (pageIndex: number, pageCount: number) => void,
+) {
+  const callback = useRef(onPageRead)
+  useEffect(() => {
+    callback.current = onPageRead
+  }, [onPageRead])
+
+  useEffect(() => {
+    const root = ref.current
+    if (!root || !numPages) return
+    const timers = new Map<number, number>()
+    const read = new Set<number>()
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const index = Number((entry.target as HTMLElement).dataset.pageIndex)
+          if (read.has(index)) continue
+          if (entry.isIntersecting) {
+            if (timers.has(index)) continue
+            timers.set(
+              index,
+              window.setTimeout(() => {
+                read.add(index)
+                timers.delete(index)
+                observer.unobserve(entry.target)
+                callback.current?.(index, numPages)
+              }, PAGE_READ_MS),
+            )
+          } else {
+            window.clearTimeout(timers.get(index))
+            timers.delete(index)
+          }
+        }
+      },
+      { threshold: 0.5 },
+    )
+    root.querySelectorAll('[data-page-index]').forEach((page) => observer.observe(page))
+    return () => {
+      observer.disconnect()
+      timers.forEach((timer) => window.clearTimeout(timer))
+    }
+  }, [ref, numPages])
 }
 
 function useContainerWidth(

@@ -26,25 +26,47 @@ class PostDrafts(BaseModel):
     posts: list[PostDraft]
 
 
-class GapConcepts(BaseModel):
-    concepts: list[str] = Field(
-        description="Concept names from the list, most relevant to the reader's struggles first.",
-    )
-
-
 class FeedPost(PostDraft):
     id: int
+    done: bool = False
 
 
 class FeedSession(BaseModel):
+    """The user's whole feed for a paper: one fixed set of posts."""
+
     status: Literal["building", "ready", "error"]
     error: str | None = None
     posts: list[FeedPost] = Field(default_factory=list)
-    seen_concepts: int = 0
-    total_concepts: int = 0
-    remaining_posts: int = 0
+    done: int = 0
 
 
 class ViewRequest(BaseModel):
     post_id: int
     correct: bool | None = None
+
+
+class ConceptStats(BaseModel):
+    posts: int = 0
+    seen: int = 0
+    right: int = 0
+    wrong: int = 0
+
+
+class ConceptLink(BaseModel):
+    concept: str = Field(description="Exact concept name from the list.")
+    requires: list[str] = Field(
+        description="Exact names from the list this concept directly builds on. Empty for foundations."
+    )
+
+
+class ConceptLinks(BaseModel):
+    """Direct prerequisite links among the paper's concepts."""
+
+    links: list[ConceptLink]
+
+
+class ConceptGraph(BaseModel):
+    """The paper's concept hierarchy: an acyclic graph, foundations first."""
+
+    main: str
+    requires: dict[str, list[str]]
