@@ -20,7 +20,8 @@ Shared, domain-agnostic code is the only exception:
 src/paper_digest/
   main.py        # FastAPI app; includes each domain's router
   core/          # config.py, db.py (SQLite via SQLModel, file in data/)
-  clients/       # claude.py: ask_claude/warm_claude (cached paper, Haiku), ask_claude_once (one-off, e.g. Sonnet summary), run_agent (Agent SDK); tts.py: local Kokoro TTS (ONNX, model in data/models)
+  clients/       # llm.py: provider-agnostic AI calls by tier (fast/smart): ask_cached (paper prompt-cached), warm, ask_once; Anthropic, OpenAI, OpenAI-compatible. tts.py: local Kokoro TTS (ONNX, model in data/models)
+  ai/            # App-wide AI provider settings (AiSettings table, presets, admin endpoints); pushes the config into clients/llm.py
   reader/        # PDF fetching/parsing, Paper table (router, pdf.py, models.py, store.py)
   analyser/      # Paper Analyzer agent (router, schemas, agent)
   splitter/      # Subject Splitter agent + analyse→split pipeline (router, schemas, agent, service)
@@ -34,22 +35,24 @@ src/paper_digest/
                  # Per-user rows (user_id): Signal, PostView, Lookup, CheckAttempt, LibraryEntry.
                  # Per-paper rows stay shared: summary, feed posts, podcast.
                  # init_db adds new nullable columns to existing tables; keep new columns nullable.
-                 # First admin: `uv run python -m paper_digest.users.cli <email> --admin`
+                 # First admin: the first-run setup screen (/users/setup, only while no user exists), or `uv run python -m paper_digest.users.cli <email> --admin`
 
 web/src/
   reader/        # PDF reader UI (same domain names as the backend)
   explainer/     # Explain popover, Summary card, Check card, Ask thread, Analogy, lookups panel
   feed/          # Feed page (/?feed=<paper_id>), post cards
   podcast/       # Podcast card on the reader: generate, play, transcript
-  users/         # Login page, admin page (/?admin), user menu
+  ai/            # AI provider form (admin page + setup screen), "AI is off" banner
+  users/         # Setup screen (fresh install), login page, admin page (/?admin), user menu
   video/         # Video widget in the reader column (+ full screen): player driven by timeline.ts (sentences -> beats)
   progress/      # Your progress + score card, knowledge map widget; notifyProgress() refreshes every view
 ```
 
 Rules:
 - A new feature goes into an existing domain or gets its own folder with its own `router.py` / `schemas.py`.
-- Each domain's router uses its domain name as the URL prefix (`/reader`, `/analyser`, `/splitter`, `/explainer`, `/feed`, `/podcast`, `/video`, `/progress`).
+- Each domain's router uses its domain name as the URL prefix (`/reader`, `/analyser`, `/splitter`, `/explainer`, `/feed`, `/podcast`, `/video`, `/progress`, `/ai`).
 - Each domain owns its tables (`models.py`) and DB access (`store.py`). Papers are keyed by the sha256 of their extracted text.
+- Never call a provider SDK directly: ask `clients/llm.py` for a tier ("fast" or "smart"), so every provider keeps working.
 - Cross-domain imports are fine when they are one-way (e.g. `splitter` uses `analyser`); avoid cycles.
 - The frontend mirrors the backend domains under `web/src/<domain>/`.
 

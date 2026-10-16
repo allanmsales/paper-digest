@@ -1,7 +1,6 @@
 import json
 
-from paper_digest.clients.claude import ask_claude_once
-from paper_digest.core.config import settings
+from paper_digest.clients.llm import ask_once
 from paper_digest.explainer.store import list_checks, list_signals, load_summary
 from paper_digest.feed.agent import concept_graph, concept_stats
 from paper_digest.progress.schemas import AssessmentDraft, AssessmentOut
@@ -85,8 +84,8 @@ def _evidence(paper_id: str, user_id: int) -> str:
 
 
 async def assess(paper_id: str, user_id: int) -> AssessmentOut:
-    draft = await ask_claude_once(
-        model=settings.summary_model,
+    draft = await ask_once(
+        "smart",
         system=SYSTEM_PROMPT,
         prompt=_evidence(paper_id, user_id),
         response_model=AssessmentDraft,

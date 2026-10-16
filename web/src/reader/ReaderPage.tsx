@@ -73,7 +73,7 @@ export function ReaderPage({ user }: Props) {
   const [openSection, setOpenSection] = useState<SectionId | ''>(() =>
     loadPref<SectionId | ''>('pd.side.open', 'reading'),
   )
-  const [folded, setFolded] = useState(() => loadPref('pd.side.folded', '') === '1')
+  const [folded, setFolded] = useState(() => loadPref<string>('pd.side.folded', '') === '1')
   const { selected, onMouseUp, clear } = useTextSelection()
   const progress = useProgress(paperId)
   const [pageCount, setPageCount] = useState(0)

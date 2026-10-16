@@ -1,7 +1,6 @@
 import asyncio
 
-from paper_digest.clients.claude import ask_claude_once
-from paper_digest.core.config import settings
+from paper_digest.clients.llm import ask_once
 from paper_digest.podcast.schemas import Script
 from paper_digest.podcast.store import load_script, save_script
 from paper_digest.reader.store import get_paper
@@ -57,8 +56,8 @@ async def _load_or_create_script(paper_id: str) -> Script:
         paper = get_paper(paper_id)
         if paper is None:
             raise LookupError(f"Unknown paper {paper_id}")
-        script = await ask_claude_once(
-            model=settings.summary_model,
+        script = await ask_once(
+            "smart",
             system=SYSTEM_PROMPT + f"\n<PAPER>\n{paper.text}\n</PAPER>",
             prompt=TASK,
             response_model=Script,

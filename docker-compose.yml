@@ -11,8 +11,10 @@ services:
     ports:
       - "8000:8000"
 
+    # Optional: the AI provider is normally set up in the app.
     env_file:
-      - .env
+      - path: .env
+        required: false
 
     volumes:
       - .:/app

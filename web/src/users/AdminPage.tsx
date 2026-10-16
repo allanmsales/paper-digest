@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
+import { AiSettingsForm } from '../ai/AiSettingsForm'
+
 import { changePassword, createUser, deleteUser, listUsers } from './api'
 import type { User } from './types'
 import { UserMenu } from './UserMenu'
@@ -70,11 +72,17 @@ export function AdminPage({ user }: Props) {
         <a className="admin__back" href="/">
           ← Reader
         </a>
-        <h1>Users</h1>
+        <h1>Admin</h1>
         <UserMenu user={user} />
       </header>
 
       <main className="admin__main">
+        <section className="admin__section">
+          <h2>AI provider</h2>
+          <AiSettingsForm />
+        </section>
+
+        <h2>Users</h2>
         {error && <p className="users__error">{error}</p>}
         {notice && <p className="users__notice">{notice}</p>}
 

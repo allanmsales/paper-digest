@@ -8,6 +8,8 @@ from paper_digest.users.schemas import (
     CreateUserRequest,
     LoginRequest,
     PasswordRequest,
+    SetupRequest,
+    SetupStatus,
     UserOut,
 )
 from paper_digest.users.store import (
@@ -33,11 +35,7 @@ def _out(user: User) -> UserOut:
     return UserOut(id=user.id, email=user.email, is_admin=user.is_admin)
 
 
-@router.post("/login", response_model=UserOut)
-def login(request: LoginRequest, response: Response) -> UserOut:
-    user = authenticate(request.email, request.password)
-    if user is None:
-        raise HTTPException(status_code=401, detail="Wrong email or password.")
+def _sign_in(user: User, response: Response) -> UserOut:
     token, expires_at = open_session(user.id)
     response.set_cookie(
         SESSION_COOKIE,
@@ -47,6 +45,29 @@ def login(request: LoginRequest, response: Response) -> UserOut:
         samesite="lax",
     )
     return _out(user)
+
+
+@router.post("/login", response_model=UserOut)
+def login(request: LoginRequest, response: Response) -> UserOut:
+    user = authenticate(request.email, request.password)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Wrong email or password.")
+    return _sign_in(user, response)
+
+
+@router.get("/setup", response_model=SetupStatus)
+def setup_status() -> SetupStatus:
+    """True on a fresh install: no account exists yet."""
+    return SetupStatus(needs_setup=not list_users())
+
+
+@router.post("/setup", response_model=UserOut, status_code=201)
+def setup(request: SetupRequest, response: Response) -> UserOut:
+    """Creates the first admin and signs them in. Only works once."""
+    if list_users():
+        raise HTTPException(status_code=409, detail="Setup is already done. Please sign in.")
+    user = create_user(request.email, request.password, is_admin=True)
+    return _sign_in(user, response)
 
 
 @router.post("/logout", status_code=204)

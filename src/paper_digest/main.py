@@ -1,8 +1,12 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse
 
+from paper_digest.ai.router import router as ai_router
+from paper_digest.ai.store import apply_saved_config
 from paper_digest.analyser.router import router as analyser_router
+from paper_digest.clients.llm import LlmNotConfigured
 from paper_digest.explainer.router import router as explainer_router
 from paper_digest.feed.router import router as feed_router
 from paper_digest.podcast.router import router as podcast_router
@@ -21,6 +25,7 @@ async def lifespan(app: FastAPI):
     # Routers import their domain models, so every table is registered here.
     init_db()
     claim_unowned_rows(["signal", "postview"])
+    apply_saved_config()
     yield
 
 
@@ -31,6 +36,11 @@ app = FastAPI(
 )
 
 
+@app.exception_handler(LlmNotConfigured)
+async def llm_not_configured(_: Request, exc: LlmNotConfigured) -> JSONResponse:
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -39,6 +49,7 @@ async def health():
 signed_in = [Depends(current_user)]
 
 app.include_router(users_router)
+app.include_router(ai_router)
 app.include_router(reader_router, dependencies=signed_in)
 app.include_router(analyser_router, dependencies=signed_in)
 app.include_router(splitter_router, dependencies=signed_in)
