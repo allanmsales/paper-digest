@@ -20,3 +20,12 @@ class CreateUserRequest(BaseModel):
 
 class PasswordRequest(BaseModel):
     password: str = Field(min_length=6)
+
+
+class SetupStatus(BaseModel):
+    needs_setup: bool
+
+
+class SetupRequest(BaseModel):
+    email: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=6)

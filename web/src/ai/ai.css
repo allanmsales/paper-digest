@@ -1,0 +1,97 @@
+.ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.ai-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ai-form label span {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.ai-form input,
+.ai-form select {
+  padding: 8px 10px;
+  font: inherit;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.ai-form__help,
+.ai-form__note {
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ai-form__models {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .ai-form__models {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ai-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ai-form__actions button {
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ai-form__actions button.users__primary {
+  color: #fff;
+  background: var(--accent);
+}
+
+.ai-form__actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ai-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  z-index: 50;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 15%);
+  transform: translateX(-50%);
+}
+
+.ai-banner a {
+  color: var(--accent);
+}

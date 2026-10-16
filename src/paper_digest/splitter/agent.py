@@ -1,6 +1,6 @@
 import json
 
-from paper_digest.clients.claude import run_agent
+from paper_digest.clients.llm import ask_once
 from paper_digest.analyser.schemas import PaperAnalyzerResponse
 from paper_digest.splitter.schemas import SubjectSplitterResponse
 
@@ -74,12 +74,14 @@ async def split_subjects(
         "direct_subjects": analysis.direct_subjects,
     }
 
-    return await run_agent(
+    return await ask_once(
+        "fast",
         prompt=f"""
 Create the prerequisite dependency graph for:
 
 {json.dumps(input_data, indent=2)}
 """,
-        system_prompt=SUBJECT_SPLITTER_PROMPT,
+        system=SUBJECT_SPLITTER_PROMPT,
         response_model=SubjectSplitterResponse,
+        max_tokens=8000,
     )

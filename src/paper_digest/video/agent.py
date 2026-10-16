@@ -1,7 +1,6 @@
 import asyncio
 
-from paper_digest.clients.claude import ask_claude_once
-from paper_digest.core.config import settings
+from paper_digest.clients.llm import ask_once
 from paper_digest.reader.store import get_paper
 from paper_digest.video.calculator import evaluate
 from paper_digest.video.schemas import ExampleVisual, Storyboard
@@ -67,8 +66,8 @@ async def _load_or_create(paper_id: str) -> Storyboard:
         paper = get_paper(paper_id)
         if paper is None:
             raise LookupError(f"Unknown paper {paper_id}")
-        board = await ask_claude_once(
-            model=settings.summary_model,
+        board = await ask_once(
+            "smart",
             system=SYSTEM_PROMPT + f"\n<PAPER>\n{paper.text}\n</PAPER>",
             prompt=TASK,
             response_model=Storyboard,
