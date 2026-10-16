@@ -48,3 +48,14 @@ export function changePassword(userId: number, password: string): Promise<void> 
 export function deleteUser(userId: number): Promise<void> {
   return request('DELETE', `/${userId}`)
 }
+
+export async function setupStatus(): Promise<{ needs_setup: boolean }> {
+  const response = await fetch('/api/users/setup')
+  if (!response.ok) throw new Error(`Request failed (${response.status}).`)
+  return response.json()
+}
+
+/** Creates the first admin on a fresh install and signs them in. */
+export function setup(email: string, password: string): Promise<User> {
+  return request('POST', '/setup', { email, password })
+}

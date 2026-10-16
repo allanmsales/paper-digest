@@ -1,8 +1,7 @@
 import asyncio
 import time
 
-from paper_digest.clients.claude import ask_claude, ask_claude_once, warm_claude
-from paper_digest.core.config import settings
+from paper_digest.clients.llm import ask_cached, ask_once, warm
 from paper_digest.explainer.store import (
     add_signals,
     load_summary,
@@ -152,7 +151,7 @@ RESPONSE_MODELS = (
 
 
 async def _ask(paper_text: str, prompt: str, response_model):
-    return await ask_claude(
+    return await ask_cached(
         system=SYSTEM_PROMPT,
         document=f"<PAPER>\n{paper_text}\n</PAPER>",
         prompt=prompt,
@@ -215,8 +214,8 @@ async def _load_or_create_summary(key: str, paper_text: str) -> SummaryResponse:
     # Saved, so sections and key ideas stay the same across restarts.
     summary = load_summary(key)
     if summary is None:
-        summary = await ask_claude_once(
-            model=settings.summary_model,
+        summary = await ask_once(
+            "smart",
             system=SYSTEM_PROMPT + f"\n<PAPER>\n{paper_text}\n</PAPER>",
             prompt=SUMMARY_TASK,
             response_model=SummaryResponse,
@@ -326,7 +325,7 @@ async def warm_paper(paper_text: str) -> None:
     _warmed_at[key] = now
 
     await asyncio.gather(
-        warm_claude(
+        warm(
             system=SYSTEM_PROMPT,
             document=f"<PAPER>\n{paper_text}\n</PAPER>",
             response_models=RESPONSE_MODELS,

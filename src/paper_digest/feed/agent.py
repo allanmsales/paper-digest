@@ -4,8 +4,7 @@ import logging
 
 from sqlmodel import select
 
-from paper_digest.clients.claude import ask_claude_once
-from paper_digest.core.config import settings
+from paper_digest.clients.llm import ask_once
 from paper_digest.core.db import db_session
 from paper_digest.explainer.agent import summarize_paper
 from paper_digest.feed.models import FeedBuild, FeedSelection, Post, PostView
@@ -104,8 +103,8 @@ async def _build(paper_id: str) -> None:
             session.add(build)
             session.commit()
 
-    drafts = await ask_claude_once(
-        model=settings.summary_model,
+    drafts = await ask_once(
+        "smart",
         system=POSTS_PROMPT,
         prompt=(
             f"<PAPER>\n{paper.text}\n</PAPER>\n\n"
@@ -215,14 +214,12 @@ async def _infer_graph(paper_id: str, concepts: list[str]) -> None:
     """For feeds built before graphs were saved: links among the existing
     concepts, so the map matches the feed's posts."""
     try:
-        result = await ask_claude_once(
-            model=settings.claude_model,
+        result = await ask_once(
+            "fast",
             system=LINKS_PROMPT,
             prompt="<CONCEPTS>\n" + "\n".join(concepts) + "\n</CONCEPTS>",
             response_model=ConceptLinks,
             max_tokens=8000,
-            effort=None,
-            fallbacks=False,
         )
         graph = acyclic_graph(concepts, {link.concept: link.requires for link in result.links})
         with db_session() as session:

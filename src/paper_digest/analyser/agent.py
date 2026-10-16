@@ -1,4 +1,4 @@
-from paper_digest.clients.claude import run_agent
+from paper_digest.clients.llm import ask_once
 from paper_digest.analyser.schemas import PaperAnalyzerResponse
 
 
@@ -38,7 +38,8 @@ async def analyze_paper_content(
     paper_text: str,
 ) -> PaperAnalyzerResponse:
 
-    return await run_agent(
+    return await ask_once(
+        "fast",
         prompt=f"""
 Analyze the following research paper:
 
@@ -46,6 +47,7 @@ Analyze the following research paper:
 {paper_text}
 </PAPER>
 """,
-        system_prompt=PAPER_ANALYZER_PROMPT,
+        system=PAPER_ANALYZER_PROMPT,
         response_model=PaperAnalyzerResponse,
+        max_tokens=4000,
     )
